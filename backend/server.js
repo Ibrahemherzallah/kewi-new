@@ -27,24 +27,40 @@ const PORT = process.env.PORT || 5000;
 const app = express();
 
 const allowedOrigins = [
+    'http://localhost:8000',
+    'http://localhost:8080',
+    'http://localhost:3000',
     'http://localhost:5173',
     'https://kewi.ps',
     'http://kewi.ps',
-    'https://www.kewi.ps'
+    'https://www.kewi.ps',
 ];
+
 app.use(cors({
     origin: function (origin, callback) {
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            console.log("❌ Blocked by CORS:", origin);
-            callback(new Error('Not allowed by CORS'));
+        // Allow tools like Postman (no origin)
+        if (!origin) {
+            return callback(null, true);
         }
+
+        // Allow explicit origins
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+
+        // Allow any localhost:* for dev (optional but convenient)
+        if (origin.startsWith('http://localhost')) {
+            return callback(null, true);
+        }
+
+        console.log("❌ Blocked by CORS:", origin);
+        return callback(new Error('Not allowed by CORS'));
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
+    credentials: true,
 }));
+
 app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,

@@ -7,23 +7,24 @@ import { bucket } from "../utils/firebaseConfig.js";
 
 export const addCategory = async (req, res) => {
     try {
-        const { name, description, other } = req.body;
+        const { name, description, other, image } = req.body; // 👈 image can be a URL now
 
-        const category = await Category.findOne({ name });
-        if (category) {
+        const existing = await Category.findOne({ name });
+        if (existing) {
             return res.status(400).json({ error: "category exists" });
         }
 
         const newCategory = new Category({
             name,
             description,
-            image: "",
-            other: other ?? false, // handle if not provided
+            image: image || "",       // 👈 if frontend sent a URL, use it
+            other: other ?? false,
         });
 
         await newCategory.save();
 
-        if (req.files && req.files.length > 0) {
+        // 🔁 BACKWARD COMPAT: if no URL but a file is uploaded, use old flow
+        if (!image && req.files && req.files.length > 0) {
             const imageUrl = await uploadCategoryImage(req.files[0]);
             newCategory.image = imageUrl;
             await newCategory.save();
@@ -54,8 +55,10 @@ export const updateCategory = async (req, res) => {
             return res.status(400).json({ error: "Invalid category ID format" });
         }
 
-        const { name, description, other } = req.body;
+        // 👇 include image from body
+        const { name, description, other, image } = req.body;
 
+        // check duplicate name (excluding current doc)
         const existingCategory = await Category.findOne({ name });
         if (existingCategory && existingCategory._id.toString() !== id) {
             return res.status(400).json({ error: "Category name already exists" });
@@ -64,10 +67,16 @@ export const updateCategory = async (req, res) => {
         const updatedData = {
             name,
             description,
-            other, // include the new boolean field
+            // make sure "other" is boolean (handles both JSON + form-data cases)
+            other: typeof other === "string" ? other === "true" : !!other,
         };
 
-        if (req.files && req.files[0]) {
+        // 🔴 NEW: if frontend sent an image URL, use it
+        if (image) {
+            updatedData.image = image;
+        }
+        // 🔁 BACKWARD COMPAT: if no image in body but file was uploaded, use old flow
+        else if (req.files && req.files[0]) {
             const imageUrl = await uploadCategoryImage(req.files[0]);
             updatedData.image = imageUrl;
         }
@@ -85,7 +94,7 @@ export const updateCategory = async (req, res) => {
         console.error("Error updating Category:", error);
         res.status(500).json({ error: error.message });
     }
-}
+};
 
 const extractPathFromUrl = (url) => {
     const baseUrl = "https://storage.googleapis.com/fitrack-efd01.appspot.com/";

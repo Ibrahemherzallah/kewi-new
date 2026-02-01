@@ -27,6 +27,8 @@ export const ProductCard = ({ product, showWholesale = false, onAddToCart }: Pro
     toggleFavorite(product.id);
   };
 
+  console.log("The language is : " ,language)
+  console.log("The product is : " ,product)
   return (
     <div className="group product-card-hover bg-card rounded-2xl overflow-hidden border border-border shadow-soft relative">
       {/* Favorite Button */}

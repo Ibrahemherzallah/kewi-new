@@ -107,10 +107,10 @@ export const addProduct = async (req, res) => {
         const {
             name,
             description,
-            id,
+            id,              // product ID (required in your new UI)
             categoryId,
             brandId,
-            gender,
+            gender,          // still optional; you can ignore from frontend
             size,
             color,
             customerPrice,
@@ -120,32 +120,64 @@ export const addProduct = async (req, res) => {
             isOnSale = false,
             isSoon = false,
             salePrice,
-            numOfClicks = 0
+            numOfClicks = 0,
+            images,          // 👈 NEW: array (or JSON string) of image URLs
+            image,           // 👈 sometimes people send `image` instead of `images`
         } = req.body;
-        // Convert empty fields to null or default values to prevent validation errors
+
+        // helper to handle boolean coming as string or boolean
+        const toBool = (val) => val === true || val === "true";
+
+        // base product data (without images yet)
         const productData = {
             name: name || "",
             description: description || "",
-            id: id || "",
-            stockNumber: stockNumber || 0,
-            categoryId: mongoose.Types.ObjectId.isValid(categoryId) ? new mongoose.Types.ObjectId(categoryId) : null,  // Convert categoryId to ObjectId
-            brandId: mongoose.Types.ObjectId.isValid(brandId) ? new mongoose.Types.ObjectId(brandId) : null,  // Convert brandId to ObjectId
-            gender: gender || null,  // Allow gender to be optional
+            id: id || "", // required on FE, but default safe here
+            stockNumber: stockNumber ? Number(stockNumber) : 0,
+            categoryId: mongoose.Types.ObjectId.isValid(categoryId)
+                ? new mongoose.Types.ObjectId(categoryId)
+                : null,
+            brandId: mongoose.Types.ObjectId.isValid(brandId)
+                ? new mongoose.Types.ObjectId(brandId)
+                : null,
+            gender: gender || null,
             size: size || null,
             color: color || "",
             customerPrice: customerPrice ? Number(customerPrice) : 0,
             wholesalerPrice: wholesalerPrice ? Number(wholesalerPrice) : 0,
             salePrice: salePrice ? Number(salePrice) : null,
-            isSoldOut: isSoldOut === "true",
-            isOnSale: isOnSale === "true",
-            isSoon: isSoon === "true",
-            numOfClicks: Number(numOfClicks),
+            isSoldOut: toBool(isSoldOut),
+            isOnSale: toBool(isOnSale),
+            isSoon: toBool(isSoon),
+            numOfClicks: Number(numOfClicks) || 0,
             image: [],
         };
-        const newProduct = new Product(productData);
-        await newProduct.save();
 
-        const imageUrls = await uploadProductImages(req.files, newProduct._id.toString());
+        const newProduct = new Product(productData);
+
+        // ✅ NEW FLOW: images already uploaded in frontend (Firebase URLs)
+        let imageUrls = [];
+
+        if (images || image) {
+            let raw = images ?? image;
+
+            if (Array.isArray(raw)) {
+                imageUrls = raw;
+            } else if (typeof raw === "string") {
+                // could be JSON string or single URL
+                try {
+                    const parsed = JSON.parse(raw);
+                    imageUrls = Array.isArray(parsed) ? parsed : [parsed];
+                } catch {
+                    imageUrls = [raw];
+                }
+            }
+        }
+        // 🔁 OLD FLOW: files uploaded to this endpoint
+        else if (req.files && req.files.length > 0) {
+            imageUrls = await uploadProductImages(req.files, newProduct._id.toString());
+        }
+
         newProduct.image = imageUrls;
         await newProduct.save();
 
