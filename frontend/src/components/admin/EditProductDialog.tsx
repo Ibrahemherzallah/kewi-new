@@ -17,7 +17,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Upload, X, Image as ImageIcon } from "lucide-react";
+import { Upload, X, Image as ImageIcon, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 import imageCompression from "browser-image-compression";
@@ -39,6 +39,12 @@ type Brand = {
     name: string;
 };
 
+type Variant = {
+    color: string;
+    stockNumber: string; // keep as string for inputs, convert on submit
+    image: string;
+};
+
 type Product = {
     _id: string;
     name: string;
@@ -57,6 +63,9 @@ type Product = {
     isSoldOut?: boolean;
     isOnSale?: boolean;
     isSoon?: boolean;
+    // NEW FIELDS
+    isMultiColor?: boolean;
+    variants?: { color?: string; stockNumber?: number; image?: string }[];
 };
 
 type EditProductDialogProps = {
@@ -65,6 +74,8 @@ type EditProductDialogProps = {
     product: Product;
     onUpdated: () => void;
 };
+
+type ProductStatus = "normal" | "soldOut" | "onSale" | "soon";
 
 export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                                                                         open,
@@ -81,6 +92,24 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     const [uploadingImages, setUploadingImages] = useState(false);
     const [saving, setSaving] = useState(false);
 
+    const [isMultiColor, setIsMultiColor] = useState<boolean>(
+        !!product.isMultiColor
+    );
+    const [variants, setVariants] = useState<Variant[]>(
+        (product.variants || []).map((v) => ({
+            color: v.color || "",
+            stockNumber: v.stockNumber?.toString() || "",
+            image: v.image || "",
+        }))
+    );
+
+    const [productStatus, setProductStatus] = useState<ProductStatus>(() => {
+        if (product.isSoldOut) return "soldOut";
+        if (product.isOnSale) return "onSale";
+        if (product.isSoon) return "soon";
+        return "normal";
+    });
+
     const [formData, setFormData] = useState({
         name: product.name || "",
         id: product.id || "",
@@ -89,11 +118,11 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         categoryId:
             typeof product.categoryId === "object"
                 ? product.categoryId?._id || ""
-                : product.categoryId || "",
+                : (product.categoryId as string) || "",
         brandId:
             typeof product.brandId === "object"
                 ? product.brandId?._id || ""
-                : product.brandId || "",
+                : (product.brandId as string) || "",
         stockNumber: product.stockNumber?.toString() || "",
         gender: product.gender || "",
         color: product.color || "",
@@ -101,13 +130,10 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         customerPrice: product.customerPrice?.toString() || "",
         wholesalerPrice: product.wholesalerPrice?.toString() || "",
         salePrice: product.salePrice?.toString() || "",
-        isSoldOut: product.isSoldOut || false,
-        isOnSale: product.isOnSale || false,
-        isSoon: product.isSoon || false,
     });
 
+    // Sync when product changes
     useEffect(() => {
-        // sync when product changes
         setFormData({
             name: product.name || "",
             id: product.id || "",
@@ -116,11 +142,11 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
             categoryId:
                 typeof product.categoryId === "object"
                     ? product.categoryId?._id || ""
-                    : product.categoryId || "",
+                    : (product.categoryId as string) || "",
             brandId:
                 typeof product.brandId === "object"
                     ? product.brandId?._id || ""
-                    : product.brandId || "",
+                    : (product.brandId as string) || "",
             stockNumber: product.stockNumber?.toString() || "",
             gender: product.gender || "",
             color: product.color || "",
@@ -128,13 +154,25 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
             customerPrice: product.customerPrice?.toString() || "",
             wholesalerPrice: product.wholesalerPrice?.toString() || "",
             salePrice: product.salePrice?.toString() || "",
-            isSoldOut: product.isSoldOut || false,
-            isOnSale: product.isOnSale || false,
-            isSoon: product.isSoon || false,
         });
-        setImagePreviews(product.image || []);
+        setImagePreviews((product.image || []) as string[]);
+        setIsMultiColor(!!product.isMultiColor);
+        setVariants(
+            (product.variants || []).map((v) => ({
+                color: v.color || "",
+                stockNumber: v.stockNumber?.toString() || "",
+                image: v.image || "",
+            }))
+        );
+        setProductStatus(() => {
+            if (product.isSoldOut) return "soldOut";
+            if (product.isOnSale) return "onSale";
+            if (product.isSoon) return "soon";
+            return "normal";
+        });
     }, [product]);
 
+    // Load dropdown data
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -158,6 +196,8 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
 
         if (open) fetchData();
     }, [open]);
+
+    /* ---------- Image Upload (single-color mode) ---------- */
 
     const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
@@ -233,11 +273,83 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
         });
     };
 
+    /* ---------- Variant helpers (multi-color) ---------- */
+
+    const handleAddVariant = () => {
+        setVariants((prev) => [
+            ...prev,
+            { color: "", stockNumber: "", image: "" },
+        ]);
+    };
+
+    const handleRemoveVariant = (index: number) => {
+        setVariants((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const handleVariantChange = (
+        index: number,
+        field: keyof Variant,
+        value: string
+    ) => {
+        setVariants((prev) =>
+            prev.map((v, i) => (i === index ? { ...v, [field]: value } : v))
+        );
+    };
+
+    const handleVariantImageUpload = async (
+        index: number,
+        e: ChangeEvent<HTMLInputElement>
+    ) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        try {
+            const compressedFile = await imageCompression(file, {
+                maxSizeMB: 1,
+                maxWidthOrHeight: 1024,
+                useWebWorker: true,
+            });
+
+            const storageRef = ref(
+                storage,
+                `product_variants/${Date.now()}-${compressedFile.name}`
+            );
+            const uploadTask = uploadBytesResumable(storageRef, compressedFile);
+
+            const downloadURL: string = await new Promise((resolve, reject) => {
+                uploadTask.on(
+                    "state_changed",
+                    () => {},
+                    (error) => reject(error),
+                    async () => {
+                        const url = await getDownloadURL(uploadTask.snapshot.ref);
+                        resolve(url);
+                    }
+                );
+            });
+
+            setVariants((prev) =>
+                prev.map((v, i) => (i === index ? { ...v, image: downloadURL } : v))
+            );
+        } catch (error) {
+            console.error(error);
+            toast({
+                title: "Error",
+                description: "Error uploading variant image",
+                variant: "destructive",
+            });
+        }
+    };
+
+    /* ---------- Submit ---------- */
+
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
+        if (saving) return;
         setSaving(true);
 
         try {
+            // Basic validation
             if (!formData.name.trim()) {
                 throw new Error("Name is required");
             }
@@ -248,25 +360,105 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                 throw new Error("Category is required");
             }
 
+            const selectedCategory = categories.find(
+                (c) => c._id === formData.categoryId
+            );
+            const isHandbags = selectedCategory?.name === "حقائب اليد";
+
+            if (isHandbags && !formData.brandId) {
+                throw new Error("Brand is required for handbags category");
+            }
+
+            // Multi-color validation
+            if (isMultiColor) {
+                if (variants.length === 0) {
+                    throw new Error("Add at least one color variant");
+                }
+
+                const invalid = variants.some(
+                    (v) => !v.color || !v.stockNumber || !v.image
+                );
+                if (invalid) {
+                    throw new Error(
+                        "Each color variant must have a color, stock number, and image"
+                    );
+                }
+            } else {
+                if (!formData.stockNumber) {
+                    throw new Error("Stock number is required");
+                }
+                if (!formData.image || formData.image.length === 0) {
+                    throw new Error("At least one image is required");
+                }
+            }
+
+            if (!formData.customerPrice || !formData.wholesalerPrice) {
+                throw new Error("Customer & wholesaler prices are required");
+            }
+
+            // Build payload
+            let isSoldOut = false;
+            let isOnSale = false;
+            let isSoon = false;
+
+            switch (productStatus) {
+                case "soldOut":
+                    isSoldOut = true;
+                    break;
+                case "onSale":
+                    isOnSale = true;
+                    break;
+                case "soon":
+                    isSoon = true;
+                    break;
+            }
+
+            let stockNumberToSend = 0;
+            let imagesToSend: string[] = [];
+
+            let variantsToSend: {
+                color: string;
+                stockNumber: number;
+                image: string;
+            }[] = [];
+
+            if (isMultiColor) {
+                variantsToSend = variants.map((v) => ({
+                    color: v.color,
+                    stockNumber: Number(v.stockNumber) || 0,
+                    image: v.image,
+                }));
+                stockNumberToSend = variantsToSend.reduce(
+                    (sum, v) => sum + v.stockNumber,
+                    0
+                );
+                imagesToSend = variantsToSend.map((v) => v.image).filter(Boolean);
+            } else {
+                stockNumberToSend = Number(formData.stockNumber) || 0;
+                imagesToSend = formData.image;
+            }
+
             const payload = {
                 name: formData.name,
                 description: formData.description,
                 id: formData.id,
                 categoryId: formData.categoryId,
                 brandId: formData.brandId || null,
-                stockNumber: Number(formData.stockNumber) || 0,
+                stockNumber: stockNumberToSend,
                 gender: formData.gender || null,
-                color: formData.color,
+                color: isMultiColor ? null : formData.color,
                 size: formData.size,
                 customerPrice: Number(formData.customerPrice) || 0,
                 wholesalerPrice: Number(formData.wholesalerPrice) || 0,
                 salePrice: formData.salePrice
                     ? Number(formData.salePrice)
                     : null,
-                isSoldOut: formData.isSoldOut,
-                isOnSale: formData.isOnSale,
-                isSoon: formData.isSoon,
-                images: formData.image,
+                isSoldOut,
+                isOnSale,
+                isSoon,
+                images: imagesToSend,
+                isMultiColor,
+                variants: variantsToSend,
             };
 
             const res = await fetch(`${PRODUCTS_API}/${product._id}`, {
@@ -337,60 +529,158 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                         </div>
                     </div>
 
-                    {/* Images */}
+                    {/* Multi-color toggle */}
                     <div className="space-y-2">
-                        <Label>Product Images (up to 5)</Label>
-                        <div className="space-y-4">
-                            {imagePreviews.length > 0 && (
-                                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                                    {imagePreviews.map((preview, index) => (
-                                        <div key={index} className="relative">
-                                            <img
-                                                src={preview}
-                                                alt={`Preview ${index + 1}`}
-                                                className="w-full h-24 object-cover rounded-lg border"
-                                            />
-                                            <Button
-                                                type="button"
-                                                variant="destructive"
-                                                size="sm"
-                                                onClick={() => removeImage(index)}
-                                                className="absolute top-1 right-1 h-6 w-6 p-0"
-                                            >
-                                                <X className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            {imagePreviews.length < 5 && (
-                                <>
-                                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                                        <ImageIcon className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-                                        <p className="text-sm text-gray-500">
-                                            اختر صور للمنتج ({imagePreviews.length}/5)
-                                        </p>
-                                    </div>
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        multiple
-                                        onChange={handleImageUpload}
-                                        className="hidden"
-                                        id="edit-product-images-upload"
-                                    />
-                                    <label
-                                        htmlFor="edit-product-images-upload"
-                                        className="cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                                    >
-                                        <Upload className="h-4 w-4 mr-2" />
-                                        {uploadingImages ? "Uploading..." : "Choose Images"}
-                                    </label>
-                                </>
-                            )}
+                        <Label>Color Mode</Label>
+                        <div className="flex items-center gap-2">
+                            <Checkbox
+                                id="edit-isMultiColor"
+                                checked={isMultiColor}
+                                onCheckedChange={(checked) =>
+                                    setIsMultiColor(Boolean(checked))
+                                }
+                            />
+                            <span className="text-sm text-muted-foreground">
+                Multiple colors, each with its own stock & image
+              </span>
                         </div>
                     </div>
+
+                    {/* Single-color images */}
+                    {!isMultiColor && (
+                        <div className="space-y-2">
+                            <Label>Product Images (up to 5)</Label>
+                            <div className="space-y-4">
+                                {imagePreviews.length > 0 && (
+                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                        {imagePreviews.map((preview, index) => (
+                                            <div key={index} className="relative">
+                                                <img
+                                                    src={preview}
+                                                    alt={`Preview ${index + 1}`}
+                                                    className="w-full h-24 object-cover rounded-lg border"
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="destructive"
+                                                    size="sm"
+                                                    onClick={() => removeImage(index)}
+                                                    className="absolute top-1 right-1 h-6 w-6 p-0"
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {imagePreviews.length < 5 && (
+                                    <>
+                                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                                            <ImageIcon className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                                            <p className="text-sm text-gray-500">
+                                                اختر صور للمنتج ({imagePreviews.length}/5)
+                                            </p>
+                                        </div>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            onChange={handleImageUpload}
+                                            className="hidden"
+                                            id="edit-product-images-upload"
+                                        />
+                                        <label
+                                            htmlFor="edit-product-images-upload"
+                                            className="cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                                        >
+                                            <Upload className="h-4 w-4 mr-2" />
+                                            {uploadingImages ? "Uploading..." : "Choose Images"}
+                                        </label>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Multi-color variants */}
+                    {isMultiColor && (
+                        <div className="space-y-3">
+                            <Label>Color Variants</Label>
+                            {variants.map((variant, index) => (
+                                <div
+                                    key={index}
+                                    className="grid grid-cols-[1.5fr,1fr,1.5fr,auto] gap-3 items-end"
+                                >
+                                    <div className="space-y-1">
+                                        <Label className="text-xs">Color</Label>
+                                        <Input
+                                            value={variant.color}
+                                            onChange={(e) =>
+                                                handleVariantChange(index, "color", e.target.value)
+                                            }
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs">Stock</Label>
+                                        <Input
+                                            type="number"
+                                            value={variant.stockNumber}
+                                            onChange={(e) =>
+                                                handleVariantChange(
+                                                    index,
+                                                    "stockNumber",
+                                                    e.target.value
+                                                )
+                                            }
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs">Image</Label>
+                                        {variant.image && (
+                                            <img
+                                                src={variant.image}
+                                                className="w-full h-16 object-cover rounded border"
+                                            />
+                                        )}
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            id={`variant-image-${index}`}
+                                            onChange={(e) => handleVariantImageUpload(index, e)}
+                                        />
+                                        <label
+                                            htmlFor={`variant-image-${index}`}
+                                            className="cursor-pointer inline-flex items-center px-3 py-1 border border-gray-300 rounded-md shadow-sm text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 mt-1"
+                                        >
+                                            <Upload className="h-3 w-3 mr-1" />
+                                            {variant.image ? "Change" : "Upload"}
+                                        </label>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => handleRemoveVariant(index)}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            ))}
+
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="mt-2"
+                                onClick={handleAddVariant}
+                            >
+                                <Plus className="h-4 w-4 mr-1" />
+                                Add Variant
+                            </Button>
+                        </div>
+                    )}
 
                     {/* Description */}
                     <div className="space-y-2">
@@ -432,7 +722,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
 
                         {showBrandSelect && (
                             <div className="space-y-2">
-                                <Label>Brand</Label>
+                                <Label>Brand *</Label>
                                 <Select
                                     value={formData.brandId}
                                     onValueChange={(value) =>
@@ -454,28 +744,30 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                         )}
                     </div>
 
-                    {/* Stock + Color */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label>Stock Number *</Label>
-                            <Input
-                                type="number"
-                                value={formData.stockNumber}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, stockNumber: e.target.value })
-                                }
-                            />
+                    {/* Stock + Color (single-color only) */}
+                    {!isMultiColor && (
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Stock Number *</Label>
+                                <Input
+                                    type="number"
+                                    value={formData.stockNumber}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, stockNumber: e.target.value })
+                                    }
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Color</Label>
+                                <Input
+                                    value={formData.color}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, color: e.target.value })
+                                    }
+                                />
+                            </div>
                         </div>
-                        <div className="space-y-2">
-                            <Label>Color</Label>
-                            <Input
-                                value={formData.color}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, color: e.target.value })
-                                }
-                            />
-                        </div>
-                    </div>
+                    )}
 
                     {/* Size + Gender */}
                     <div className="grid grid-cols-2 gap-4">
@@ -563,46 +855,42 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                         </div>
                     </div>
 
-                    {/* Flags */}
-                    <div className="flex flex-wrap gap-6">
-                        <div className="flex items-center space-x-2">
-                            <Checkbox
-                                id="edit-isSoldOut"
-                                checked={formData.isSoldOut}
-                                onCheckedChange={(checked) =>
-                                    setFormData({
-                                        ...formData,
-                                        isSoldOut: checked as boolean,
-                                    })
-                                }
-                            />
-                            <Label htmlFor="edit-isSoldOut">Sold Out</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <Checkbox
-                                id="edit-isOnSale"
-                                checked={formData.isOnSale}
-                                onCheckedChange={(checked) =>
-                                    setFormData({
-                                        ...formData,
-                                        isOnSale: checked as boolean,
-                                    })
-                                }
-                            />
-                            <Label htmlFor="edit-isOnSale">On Sale</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <Checkbox
-                                id="edit-isSoon"
-                                checked={formData.isSoon}
-                                onCheckedChange={(checked) =>
-                                    setFormData({
-                                        ...formData,
-                                        isSoon: checked as boolean,
-                                    })
-                                }
-                            />
-                            <Label htmlFor="edit-isSoon">Coming Soon</Label>
+                    {/* Status (single-choice) */}
+                    <div className="space-y-2">
+                        <Label>Product status</Label>
+                        <div className="flex flex-wrap gap-6">
+                            <div className="flex items-center space-x-2">
+                                <Checkbox
+                                    id="edit-status-normal"
+                                    checked={productStatus === "normal"}
+                                    onCheckedChange={() => setProductStatus("normal")}
+                                />
+                                <Label htmlFor="edit-status-normal">Available</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <Checkbox
+                                    id="edit-status-onSale"
+                                    checked={productStatus === "onSale"}
+                                    onCheckedChange={() => setProductStatus("onSale")}
+                                />
+                                <Label htmlFor="edit-status-onSale">On Sale</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <Checkbox
+                                    id="edit-status-soon"
+                                    checked={productStatus === "soon"}
+                                    onCheckedChange={() => setProductStatus("soon")}
+                                />
+                                <Label htmlFor="edit-status-soon">Coming Soon</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <Checkbox
+                                    id="edit-status-soldOut"
+                                    checked={productStatus === "soldOut"}
+                                    onCheckedChange={() => setProductStatus("soldOut")}
+                                />
+                                <Label htmlFor="edit-status-soldOut">Sold Out</Label>
+                            </div>
                         </div>
                     </div>
 
@@ -611,6 +899,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                             type="button"
                             variant="outline"
                             onClick={() => onOpenChange(false)}
+                            disabled={saving}
                         >
                             Cancel
                         </Button>

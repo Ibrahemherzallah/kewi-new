@@ -18,7 +18,7 @@ import {
 // 🔹 API base
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001";
 const CATEGORIES_API = `${API_BASE}/admin/categories`;
-const PRODUCTS_API = `${API_BASE}/admin/products`;
+const PRODUCTS_API = `${API_BASE}/user/products`;
 
 type BackendCategory = {
   _id: string;
@@ -131,9 +131,6 @@ const Home = () => {
     loadData();
   }, []);
 
-  console.log("The featuredProducts is : ", featuredProducts)
-  console.log("The categories is : ", categories)
-
 
   const handleAddToCart = (product: UiProduct) => {
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
@@ -157,6 +154,7 @@ const Home = () => {
     });
   };
 
+  console.log("featuredProducts is : , " , featuredProducts)
   return (
       <div className="min-h-screen bg-background">
         <Navbar cartCount={0} />
