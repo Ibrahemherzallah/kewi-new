@@ -9,7 +9,7 @@ import brandRoutes from './routes/adminRoutes/brand.routes.js';
 import orderRoutes from './routes/adminRoutes/order.routes.js';
 import homeRoutes from './routes/userRoutes/home.routes.js';
 import usersRoutes from './routes/userRoutes/user.routes.js';
-
+import userProductRoutes from './routes/userRoutes/product.routes.js';
 import cors from 'cors';
 import session from "express-session";
 import helmet from 'helmet';
@@ -168,6 +168,7 @@ app.use('/admin', wholesalerRoutes);
 app.use('/admin', usersRoutes);
 app.use('/auth', authRoutes);
 app.use('/user', homeRoutes);
+app.use('/user', userProductRoutes);
 
 // ✅ CATCH-ALL MUST BE LAST
 app.get('*', (req, res) => {

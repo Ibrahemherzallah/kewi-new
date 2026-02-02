@@ -42,6 +42,17 @@ const productSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
+  variants: [
+    {
+      color: String,
+      stockNumber: Number,
+      image: String,
+    },
+  ],
+  isMultiColor: {
+    type: Boolean,
+    default: false
+  },
   size: {
     type: String,
     required: false,
@@ -54,6 +65,10 @@ const productSchema = new mongoose.Schema({
   wholesalerPrice: {
     type: Number,
     required: true,
+  },
+  featured: {
+    type: Boolean,
+    default: false,
   },
   salePrice: {
     type: Number,

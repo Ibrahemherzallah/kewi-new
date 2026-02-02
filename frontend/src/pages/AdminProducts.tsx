@@ -7,28 +7,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Edit, Trash2, Package, ArrowLeft } from "lucide-react";
 import { AddProductDialog } from "@/components/admin/AddProductDialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow,} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { EditProductDialog } from "@/components/admin/EditProductDialog";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue,} from "@/components/ui/select";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001";
 const PRODUCTS_API = `${API_BASE}/admin/products`;
+const CATEGORIES_API = `${API_BASE}/admin/categories`;
+
+type Category = {
+  _id: string;
+  name: string;
+};
 
 type Product = {
   _id: string;
   name: string;
   description?: string;
-  id?: string;              // your internal ID field
-  image?: string[];         // array of image URLs
-  categoryId?: any;
+  id?: string; // internal ID
+  image?: string[];
+  categoryId?: any; // can be string or populated object
   brandId?: any;
   stockNumber?: number;
   gender?: string;
@@ -40,11 +40,16 @@ type Product = {
   isSoldOut?: boolean;
   isOnSale?: boolean;
   isSoon?: boolean;
+  featured?: boolean;
 };
 
 const AdminProducts = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,25 +58,73 @@ const AdminProducts = () => {
 
   const { toast } = useToast();
 
-  const fetchProducts = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch(PRODUCTS_API);
-      if (!res.ok) throw new Error("Failed to fetch products");
-      const data: Product[] = await res.json();
-      setProducts(data);
+
+      const [prodRes, catRes] = await Promise.all([
+        fetch(PRODUCTS_API),
+        fetch(CATEGORIES_API),
+      ]);
+
+      if (!prodRes.ok) throw new Error("Failed to fetch products");
+
+      const productsData: Product[] = await prodRes.json();
+      setProducts(productsData);
+
+      if (catRes.ok) {
+        const categoriesData: Category[] = await catRes.json();
+        setCategories(categoriesData);
+      }
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "Error loading products");
+      setError(err.message || "Error loading data");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProducts();
+    fetchData();
   }, []);
+
+
+  const toggleFeatured = async (product: Product) => {
+    try {
+      const res = await fetch(`${PRODUCTS_API}/${product._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          featured: !product.featured,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update product");
+      }
+
+      toast({
+        title: "Updated",
+        description: !product.featured
+            ? "Product marked as featured"
+            : "Product removed from featured",
+      });
+
+      fetchData();
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        title: "Error",
+        description: err.message || "Failed to update product",
+        variant: "destructive",
+      });
+    }
+  };
+
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this product?")) return;
@@ -92,7 +145,7 @@ const AdminProducts = () => {
         description: "Product deleted successfully",
       });
 
-      fetchProducts();
+      fetchData();
     } catch (err: any) {
       console.error(err);
       toast({
@@ -103,13 +156,37 @@ const AdminProducts = () => {
     }
   };
 
+  // helper to get category name from product.categoryId
+  const getCategoryName = (product: Product): string => {
+    if (!product.categoryId) return "—";
+
+    // populated object case
+    if (typeof product.categoryId === "object") {
+      return product.categoryId.name || "—";
+    }
+
+    // string id case: look up in categories state
+    const cat = categories.find((c) => c._id === product.categoryId);
+    return cat?.name || "—";
+  };
+
   const filteredProducts = products.filter((product) => {
     const q = searchQuery.toLowerCase();
-    return (
+
+    const matchesSearch =
         product.name.toLowerCase().includes(q) ||
         (product.id && product.id.toLowerCase().includes(q)) ||
-        (product.color && product.color.toLowerCase().includes(q))
-    );
+        (product.color && product.color.toLowerCase().includes(q)) ||
+        getCategoryName(product).toLowerCase().includes(q);
+
+    const matchesCategory =
+        categoryFilter === "all"
+            ? true
+            : typeof product.categoryId === "object"
+                ? product.categoryId?._id === categoryFilter
+                : product.categoryId === categoryFilter;
+
+    return matchesSearch && matchesCategory;
   });
 
   return (
@@ -132,20 +209,41 @@ const AdminProducts = () => {
                 </p>
               </div>
             </div>
-            <AddProductDialog onProductCreated={fetchProducts} />
+            <AddProductDialog onProductCreated={fetchData} />
           </div>
 
-          {/* Search */}
-          <div className="mb-6">
-            <div className="relative max-w-md">
+          {/* Filters row: Search + Category filter */}
+          <div className="mb-6 flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
+            {/* Search */}
+            <div className="relative max-w-md w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                   type="text"
-                  placeholder="Search by name, ID, or color..."
+                  placeholder="Search by name, ID, color, or category..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
               />
+            </div>
+
+            {/* Category Filter */}
+            <div className="w-full md:w-64">
+              <Select
+                  value={categoryFilter}
+                  onValueChange={(value) => setCategoryFilter(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All categories</SelectItem>
+                  {categories.map((cat) => (
+                      <SelectItem key={cat._id} value={cat._id}>
+                        {cat.name}
+                      </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -166,12 +264,14 @@ const AdminProducts = () => {
                       <TableHead>Image</TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>ID</TableHead>
+                      <TableHead>Category</TableHead>
                       <TableHead>Gender</TableHead>
                       <TableHead>Size</TableHead>
                       <TableHead>Stock</TableHead>
                       <TableHead>Customer Price</TableHead>
                       <TableHead>Wholesaler Price</TableHead>
                       <TableHead>Sale Price</TableHead>
+                      <TableHead>Featured</TableHead>  {/* 👈 NEW */}
                       <TableHead>Flags</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -206,6 +306,9 @@ const AdminProducts = () => {
                             </Badge>
                           </TableCell>
 
+                          {/* Category */}
+                          <TableCell>{getCategoryName(product)}</TableCell>
+
                           {/* Gender */}
                           <TableCell>{product.gender || "—"}</TableCell>
 
@@ -239,6 +342,17 @@ const AdminProducts = () => {
                             {product.salePrice != null
                                 ? `${product.salePrice.toFixed(2)} ₪`
                                 : "—"}
+                          </TableCell>
+
+                          {/* Featured toggle 👇 */}
+                          <TableCell>
+                            <Button
+                                variant={product.featured ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => toggleFeatured(product)}
+                            >
+                              {product.featured ? "Yes" : "No"}
+                            </Button>
                           </TableCell>
 
                           {/* Flags */}
@@ -289,8 +403,9 @@ const AdminProducts = () => {
 
                     {filteredProducts.length === 0 && !loading && (
                         <TableRow>
+                          {/* we now have 13 columns total */}
                           <TableCell
-                              colSpan={11}
+                              colSpan={13}
                               className="text-center py-6 text-muted-foreground"
                           >
                             No products found
@@ -309,7 +424,7 @@ const AdminProducts = () => {
                 open={editOpen}
                 onOpenChange={setEditOpen}
                 product={selectedProduct}
-                onUpdated={fetchProducts}
+                onUpdated={fetchData}
             />
         )}
       </div>

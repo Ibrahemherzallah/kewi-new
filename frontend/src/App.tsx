@@ -24,6 +24,7 @@ import PurchaseHistory from "./pages/PurchaseHistory";
 import Cart from "./pages/Cart";
 import Favorites from "./pages/Favorites";
 import NotFound from "./pages/NotFound";
+import CategoryProducts from "@/pages/CategoryProducts.tsx";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ const App = () => (
                   <Route path="/login" element={<Login />} />
                   <Route path="/cart" element={<Cart />} />
                   <Route path="/favorites" element={<Favorites />} />
+                  <Route path="/category/:categoryId" element={<CategoryProducts />} />
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/admin/products" element={<AdminProducts />} />
                   <Route path="/admin/accounting" element={<AdminAccounting />} />

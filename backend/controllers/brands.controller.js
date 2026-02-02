@@ -26,29 +26,55 @@ export const incrementBrandClick = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+// controllers/brandController.js (or wherever you keep it)
 export const addBrand = async (req, res) => {
     try {
         const { name } = req.body;
-        const isFake = req.body.isFake === "true";
-        const brand = await Brand.findOne({ name });
-        if (brand) {
+
+        if (!name || !name.trim()) {
+            return res.status(400).json({ error: "Brand name is required" });
+        }
+
+        // Support boolean or "true"/"false"
+        const isFake =
+            req.body.isFake === true ||
+            req.body.isFake === "true" ||
+            req.body.isFake === "1";
+
+        // Check if brand already exists
+        const existing = await Brand.findOne({ name: name.trim() });
+        if (existing) {
             console.log("brand exists");
             return res.status(400).json({ error: "brand exists" });
         }
 
+        // --------- IMAGE HANDLING (new way first) ----------
+        let finalImage = "";
+
+        const { image, images } = req.body;
+
+        if (images || image) {
+            // we may get: images: [url1, url2], or images: "url1", or image: "url1"
+            if (Array.isArray(images)) {
+                finalImage = images[0] || "";
+            } else if (typeof images === "string" && images.trim()) {
+                finalImage = images.trim();
+            } else if (typeof image === "string" && image.trim()) {
+                finalImage = image.trim();
+            }
+        } else if (req.files && req.files.length > 0) {
+            // legacy flow – upload the first file
+            finalImage = await uploadBrandImage(req.files[0]);
+        }
+
         const newBrand = new Brand({
-            name,
+            name: name.trim(),
             isFake,
-            image: ""
+            image: finalImage,
         });
 
         await newBrand.save();
-
-        if (req.files && req.files.length > 0) {
-            const imageUrl = await uploadBrandImage(req.files[0]); // Upload the first image
-            newBrand.image = imageUrl;
-            await newBrand.save();
-        }
 
         res.status(201).json(newBrand);
         console.log("Brand stored successfully");
