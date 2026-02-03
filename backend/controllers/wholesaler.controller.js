@@ -16,6 +16,11 @@ export const addWholesaler = async (req, res) => {
             return res.status(400).json({ error: "Username exists" });
         }
 
+        const phoneExists = await User.findOne({ phone });
+        if (phoneExists) {
+            return res.status(400).json({ message: "Phone already in use" });
+        }
+
         const salt = await bcrypt.genSalt(10);
         const hashedPass = await bcrypt.hash(password, salt);
 
@@ -24,7 +29,8 @@ export const addWholesaler = async (req, res) => {
             password: hashedPass,
             phone,
             address,
-            isWholesaler:true
+            isWholesaler:true,
+            role: 'wholesaler'
         });
 
         await newUser.save();

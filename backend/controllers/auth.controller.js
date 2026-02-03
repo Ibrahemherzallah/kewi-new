@@ -1,99 +1,117 @@
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import User from "../models/users.model.js";
-import session from "express-session";
 
+const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
+const JWT_EXPIRES_IN = "7d";
 
+const createToken = (user) => {
+    return jwt.sign(
+        {
+            id: user._id,
+            role: user.role,
+        },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
+    );
+};
+
+// SIGN UP
 export const signUp = async (req, res) => {
     try {
-        const { userName, password,phone, isWholesaler } = req.body;
+        const { username, phone, password, address, dob } = req.body;
 
-        // Check if user already exists
-        const existingUser = await User.findOne({ userName });
-        if (existingUser) {
-            return res.status(400).json({ error: "Username already taken" });
+        if (!username || !phone || !password) {
+            return res.status(400).json({ message: "Missing required fields" });
         }
 
-        // Hash password
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
+        const phoneExists = await User.findOne({ phone });
+        if (phoneExists) {
+            return res.status(400).json({ message: "Phone already in use" });
+        }
 
-        // Create new user
-        const newUser = new User({
-            userName,
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const user = await User.create({
+            userName: username,
             phone,
             password: hashedPassword,
-            isWholesaler: isWholesaler || false,
+            address: address || "",
+            isWholesaler: false,
+            dob: dob ? new Date(dob) : undefined, // ✅ here
+            role: "user"
         });
 
-        await newUser.save();
-
-        // Store user in session
-        req.session.user = {
-            _id: newUser._id,
-            userName: newUser.userName,
-            isWholesaler: newUser.isWholesaler
-        };
-
-        const redirectUrl = newUser.isWholesaler ? "/" : "/admin/dashboard";
+        const token = createToken(user);
 
         res.status(201).json({
-            message: "Signup successful",
-            user: req.session.user,
-            redirectUrl
+            token,
+            user: {
+                id: user._id,
+                username: user.userName,
+                phone: user.phone,
+                role: user.role,
+                address: user.address,
+                dob: user.dob,
+            },
         });
-
     } catch (err) {
-        console.error("Signup error:", err.message);
-        res.status(500).json({ error: "Internal server error" });
+        console.error("Signup error:", err);
+
+        if (err.code === 11000 && err.keyPattern?.phone) {
+            return res.status(400).json({
+                message: "Phone already in use",
+                field: "phone",
+            });
+        }
+
+        if (err.name === "ValidationError") {
+            const firstErrorKey = Object.keys(err.errors)[0];
+            const friendlyMessage = err.errors[firstErrorKey].message;
+
+            return res.status(400).json({
+                message: friendlyMessage,
+                field: firstErrorKey,
+            });
+        }
+
+        res.status(500).json({ message: err.message || "Unknown server error" });
     }
 };
 
-
-
-
-
-
+// POST /api/auth/login
+// LOGIN (phone + password)
 export const logIn = async (req, res) => {
     try {
-        const { userName, password } = req.body;
+        const { phone, password } = req.body;
 
-        const user = await User.findOne({ userName });
+        if (!phone || !password) {
+            return res.status(400).json({ message: "Missing phone or password" });
+        }
 
+        const user = await User.findOne({ phone });
         if (!user) {
-            return res.status(404).json({ error: "Invalid username or password" });
+            return res.status(400).json({ message: "Invalid phone or password" });
         }
 
-        const correctPass = await bcrypt.compare(password, user.password);
-
-        if (!correctPass) {
-            return res.status(400).json({ error: "Invalid username or password" });
+        const match = await bcrypt.compare(password, user.password);
+        if (!match) {
+            return res.status(400).json({ message: "Invalid phone or password" });
         }
 
-        // Store user information in session
-        req.session.user = {
-            _id: user._id,
-            userName: user.userName,
-            isWholesaler: user.isWholesaler
-        };
-        const redirectUrl = user.isWholesaler ? "/" : "/admin/dashboard";
+        const token = createToken(user);
 
-        return res.status(200).json({
-            message: "Login successful",
-            user: req.session.user,
-            redirectUrl
+        res.json({
+            token,
+            user: {
+                id: user._id,
+                username: user.userName,
+                phone: user.phone,
+                role: user.role,
+                address: user.address,
+            },
         });
-
-    } catch (e) {
-        console.error("Error:", e.message);
-        res.status(500).json({ error: "Internal server error" });
+    } catch (err) {
+        res.status(500).json({ message: "Server error" });
     }
-};
-
-export const logOut = (req, res) => {
-    req.session.destroy((err) => {
-        if (err) {
-            return res.status(500).json({ error: "Error logging out" });
-        }
-        res.json({ message: "Logged out successfully" });
-    });
 };

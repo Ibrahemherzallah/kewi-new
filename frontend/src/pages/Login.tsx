@@ -11,42 +11,67 @@ const Login = () => {
   const { toast } = useToast();
   const { language } = useLanguage();
   const [formData, setFormData] = useState({
-    email: "",
+    phone: "",
     password: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Frontend only - simple demo authentication
-    if (!formData.email || !formData.password) {
+
+    if (!formData.phone || !formData.password) {
       toast({
-        title: language === 'ar' ? 'خطأ' : 'Error',
-        description: language === 'ar' ? 'الرجاء ملء جميع الحقول' : 'Please fill in all fields',
+        title: language === "ar" ? "خطأ" : "Error",
+        description:
+            language === "ar"
+                ? "الرجاء ملء جميع الحقول"
+                : "Please fill in all fields",
         variant: "destructive",
       });
       return;
     }
 
-    // Demo: Check for admin or wholesaler
-    if (formData.email.includes('admin')) {
-      localStorage.setItem('userRole', 'admin');
-      toast({
-        title: language === 'ar' ? 'مرحباً بك' : 'Welcome',
-        description: language === 'ar' ? 'تم تسجيل الدخول كمسؤول' : 'Logged in as Admin',
+    try {
+      const res = await fetch("http://localhost:5001/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: formData.phone,
+          password: formData.password,
+        }),
       });
-      navigate('/admin');
-    } else if (formData.email.includes('wholesaler')) {
-      localStorage.setItem('userRole', 'wholesaler');
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Invalid credentials");
+      }
+
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("userRole", data.user.role);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
       toast({
-        title: language === 'ar' ? 'مرحباً بك' : 'Welcome',
-        description: language === 'ar' ? 'تم تسجيل الدخول كتاجر جملة' : 'Logged in as Wholesaler',
+        title: language === "ar" ? "مرحباً بك" : "Welcome",
+        description:
+            language === "ar"
+                ? "تم تسجيل الدخول بنجاح"
+                : "Logged in successfully",
       });
-      navigate('/products');
-    } else {
+
+      if (data.user.role === "admin") {
+        navigate("/admin");
+      } else {
+        // user or wholesaler
+        navigate("/");
+      }
+    } catch (err: any) {
       toast({
-        title: language === 'ar' ? 'خطأ' : 'Error',
-        description: language === 'ar' ? 'بريد إلكتروني أو كلمة مرور غير صحيحة' : 'Invalid email or password',
+        title: language === "ar" ? "خطأ" : "Error",
+        description:
+            err.message ||
+            (language === "ar"
+                ? "بريد إلكتروني أو كلمة مرور غير صحيحة"
+                : "Invalid email or password"),
         variant: "destructive",
       });
     }
@@ -72,20 +97,15 @@ const Login = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="text-sm font-medium mb-2 block">
-                {language === 'ar' ? 'البريد الإلكتروني' : 'Email'}
+                {language === 'ar' ? 'الرقم' : 'Phone'}
               </label>
               <Input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder={language === 'ar' ? 'أدخل بريدك الإلكتروني' : 'Enter your email'}
+                // type="email"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder={language === 'ar' ? 'أدخل رقمك' : 'Enter your phone number'}
                 required
               />
-              <p className="text-xs text-muted-foreground mt-2">
-                {language === 'ar' 
-                  ? 'استخدم "admin@example.com" للمسؤول أو "wholesaler@example.com" لتاجر الجملة' 
-                  : 'Use "admin@example.com" for Admin or "wholesaler@example.com" for Wholesaler'}
-              </p>
             </div>
 
             <div>
@@ -107,18 +127,19 @@ const Login = () => {
           </form>
 
           <div className="mt-6 text-center">
-            <Link to="/" className="text-sm text-primary hover:underline">
-              {language === 'ar' ? 'العودة إلى الصفحة الرئيسية' : 'Back to Home'}
+            <Link to="/" className="text-sm text-primary hover:underline block mb-2">
+              {language === "ar" ? "العودة إلى الصفحة الرئيسية" : "Back to Home"}
             </Link>
+            <span className="text-sm text-muted-foreground">
+              {language === "ar" ? "لا تمتلك حساباً؟" : "Don't have an account?"}{" "}
+                        <Link to="/signup" className="text-primary hover:underline">
+                {language === "ar" ? "إنشاء حساب" : "Sign Up"}
+              </Link>
+            </span>
           </div>
         </div>
 
-        <div className="mt-6 p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground">
-          <p className="font-semibold mb-2">{language === 'ar' ? 'حسابات تجريبية:' : 'Demo Accounts:'}</p>
-          <p>Admin: admin@example.com</p>
-          <p>Wholesaler: wholesaler@example.com</p>
-          <p className="mt-2 text-xs">{language === 'ar' ? '(أي كلمة مرور)' : '(any password)'}</p>
-        </div>
+
       </div>
     </div>
   );

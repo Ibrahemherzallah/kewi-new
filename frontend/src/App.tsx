@@ -25,49 +25,118 @@ import Cart from "./pages/Cart";
 import Favorites from "./pages/Favorites";
 import NotFound from "./pages/NotFound";
 import CategoryProducts from "@/pages/CategoryProducts.tsx";
-
+import ProtectedRoute from "@/components/ProtectedRoute";
+import SignUp from "./pages/SignUp";
+import Profile from "./pages/Profile";
 const queryClient = new QueryClient();
 
 // Language, theme, loyalty, and favorites providers configured
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-      <LanguageProvider>
-        <LoyaltyProvider>
-          <FavoritesProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/products" element={<Products />} />
-                  <Route path="/product/:id" element={<ProductDetail />} />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/contact" element={<Contact />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/cart" element={<Cart />} />
-                  <Route path="/favorites" element={<Favorites />} />
-                  <Route path="/category/:categoryId" element={<CategoryProducts />} />
-                  <Route path="/admin" element={<AdminDashboard />} />
-                  <Route path="/admin/products" element={<AdminProducts />} />
-                  <Route path="/admin/accounting" element={<AdminAccounting />} />
-                  <Route path="/admin/brands" element={<AdminBrands />} />
-                  <Route path="/admin/categories" element={<AdminCategories />} />
-                  <Route path="/admin/wholesalers" element={<AdminWholesalers />} />
-                  <Route path="/admin/orders" element={<AdminOrders />} />
-                  <Route path="/purchase-history" element={<PurchaseHistory />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-            </TooltipProvider>
-          </FavoritesProvider>
-        </LoyaltyProvider>
-      </LanguageProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+        <LanguageProvider>
+          <LoyaltyProvider>
+            <FavoritesProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/products" element={<Products />} />
+                    <Route path="/product/:id" element={<ProductDetail />} />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/contact" element={<Contact />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/signup" element={<SignUp />} />
+                    <Route path="/cart" element={<Cart />} />
+                    <Route path="/favorites" element={<Favorites />} />
+                    <Route
+                        path="/purchase-history"
+                        element={
+                          <ProtectedRoute allowedRoles={["user", "wholesaler", "admin"]}>
+                            <PurchaseHistory />
+                          </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/profile"
+                        element={
+                          <ProtectedRoute allowedRoles={["user", "wholesaler", "admin"]}>
+                            <Profile />
+                          </ProtectedRoute>
+                        }
+                    />
+                    <Route path="/category/:categoryId" element={<CategoryProducts />} />
+
+                    {/* Admin-only routes */}
+                    <Route
+                        path="/admin"
+                        element={
+                          <ProtectedRoute allowedRoles={["admin"]}>
+                            <AdminDashboard />
+                          </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/products"
+                        element={
+                          <ProtectedRoute allowedRoles={["admin"]}>
+                            <AdminProducts />
+                          </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/accounting"
+                        element={
+                          <ProtectedRoute allowedRoles={["admin"]}>
+                            <AdminAccounting />
+                          </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/brands"
+                        element={
+                          <ProtectedRoute allowedRoles={["admin"]}>
+                            <AdminBrands />
+                          </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/categories"
+                        element={
+                          <ProtectedRoute allowedRoles={["admin"]}>
+                            <AdminCategories />
+                          </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/wholesalers"
+                        element={
+                          <ProtectedRoute allowedRoles={["admin"]}>
+                            <AdminWholesalers />
+                          </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/orders"
+                        element={
+                          <ProtectedRoute allowedRoles={["admin"]}>
+                            <AdminOrders />
+                          </ProtectedRoute>
+                        }
+                    />
+
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </BrowserRouter>
+              </TooltipProvider>
+            </FavoritesProvider>
+          </LoyaltyProvider>
+        </LanguageProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
 );
 
 export default App;
