@@ -1,23 +1,43 @@
-// scripts/setFeaturedDefault.js
+// scripts/setUserRolesFromIsWholesaler.js
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import connectDB from "../db/connectDB.js";
-import Product from "../models/product.model.js"; // adjust path to your Product model
+import User from "../models/users.model.js"; // adjust the path if needed
 
 dotenv.config();
 
 const run = async () => {
     try {
         await connectDB();
+        console.log("Connected to DB");
 
-        // Update only products that DON'T have "featured" field yet
-        const result = await Product.updateMany(
-            { featured: { $exists: false } },
-            { $set: { featured: false } }
+        // 1) Set role = "wholesaler" where isWholesaler === true and role not set
+        const wholesalersResult = await User.updateMany(
+            {
+                isWholesaler: true,
+                $or: [{ role: { $exists: false } }, { role: null }],
+            },
+            { $set: { role: "wholesaler" } }
         );
 
-        console.log("Migration done. Matched:", result.matchedCount || result.n);
-        console.log("Modified:", result.modifiedCount || result.nModified);
+        console.log("Wholesalers update:");
+        console.log("  Matched:", wholesalersResult.matchedCount ?? wholesalersResult.n);
+        console.log("  Modified:", wholesalersResult.modifiedCount ?? wholesalersResult.nModified);
+
+        // 2) Set role = "admin" where isWholesaler === false and role not set
+        const adminsResult = await User.updateMany(
+            {
+                isWholesaler: false,
+                $or: [{ role: { $exists: false } }, { role: null }],
+            },
+            { $set: { role: "admin" } }
+        );
+
+        console.log("Admins update:");
+        console.log("  Matched:", adminsResult.matchedCount ?? adminsResult.n);
+        console.log("  Modified:", adminsResult.modifiedCount ?? adminsResult.nModified);
+
+        console.log("Role migration done ✅");
     } catch (err) {
         console.error("Migration error:", err);
     } finally {
