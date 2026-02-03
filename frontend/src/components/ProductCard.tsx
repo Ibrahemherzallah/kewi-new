@@ -7,28 +7,24 @@ import { useFavorites } from "@/contexts/FavoritesContext";
 import { cn } from "@/lib/utils";
 
 interface ProductCardProps {
-  // allow any shape, we’ll normalize inside
   product: any;
   showWholesale?: boolean;
   onAddToCart?: (product: any) => void;
 }
 
-export const ProductCard = ({
-                              product,
-                              showWholesale = false,
-                              onAddToCart,
-                            }: ProductCardProps) => {
+export const ProductCard = ({product, showWholesale = false, onAddToCart,}: ProductCardProps) => {
   const { language } = useLanguage();
   const { toggleFavorite, isFavorite } = useFavorites();
 
   // --------- NORMALIZATION HELPERS ----------
 
   // id to use for URL / favorites
-  const productId: string =
-      product.id || "";
-
+  const productId: string = product.id || (product as any)._id || "";
+  console.log("ssssssssss The productId0 " , productId )
   const mongoId = product._id;
-  // images: support both `images` and `image`
+    console.log("ssssssssss The mongoId " , mongoId )
+
+    // images: support both `images` and `image`
   const rawImages = product.images ?? product.image ?? [];
   const images: string[] = Array.isArray(rawImages)
       ? rawImages
@@ -85,13 +81,14 @@ export const ProductCard = ({
   const description = getDescription();
 
   const isFav = isFavorite(productId);
+    console.log(" The isFav " , isFav )
 
-  const handleFavoriteClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!productId) return;
-    toggleFavorite(productId);
-  };
+    const handleFavoriteClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!productId) return;
+        toggleFavorite(product); // 👈 now saves full product
+    };
 
   console.log("The product is:", product);
 

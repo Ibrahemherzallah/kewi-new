@@ -216,7 +216,7 @@ const Home = () => {
                             key={category._id}
                             className="md:basis-1/2 lg:basis-1/3"
                         >
-                          <Link to="/products">
+                          <Link to={`/category/${category._id}`}>
                             <div className="relative group overflow-hidden rounded-2xl h-80 cursor-pointer">
                               <img
                                   src={category.image || placeholderImage}
