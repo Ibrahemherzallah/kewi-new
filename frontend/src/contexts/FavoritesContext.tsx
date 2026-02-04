@@ -27,7 +27,7 @@ const STORAGE_KEY = "favorites";
 const getId = (productOrId: FavoriteProduct | string): string | undefined => {
   if (!productOrId) return undefined;
   if (typeof productOrId === "string") return productOrId;
-  return (productOrId as any).id || (productOrId as any)._id;
+  return (productOrId as any)._id || (productOrId as any).id;
 };
 
 export const FavoritesProvider: React.FC<{ children: React.ReactNode }> = ({

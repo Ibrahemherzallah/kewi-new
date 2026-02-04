@@ -22,7 +22,7 @@ export const Navbar = ({ cartCount = 0 }: NavbarProps) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { t, language } = useLanguage();
   const { favorites } = useFavorites();
-
+  const [cartItems,setCartItems] = useState<number>();
   const [role, setRole] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const navigate = useNavigate();
@@ -35,6 +35,20 @@ export const Navbar = ({ cartCount = 0 }: NavbarProps) => {
     setIsLoggedIn(!!token);
   }, []);
 
+  useEffect(() => {
+    const loadCart = () => {
+      try {
+        const raw = localStorage.getItem("cart") || "[]";
+        const saved = JSON.parse(raw);
+        setCartItems(saved.length);
+      } catch (e) {
+        console.error("Error parsing cart:", e);
+        setCartItems(0);
+      }
+    };
+
+    loadCart();
+  });
   const handleUserClick = () => {
     if (!isLoggedIn || !role) {
       // Guest → go to login
@@ -49,6 +63,7 @@ export const Navbar = ({ cartCount = 0 }: NavbarProps) => {
       navigate("/profile");
     }
   };
+  // console.error("Error parsing cart:", cartItems);
 
   const handleOrdersClick = () => {
     if (!isLoggedIn) {
@@ -140,11 +155,9 @@ export const Navbar = ({ cartCount = 0 }: NavbarProps) => {
                     className="btn-scale relative"
                 >
                   <ShoppingCart className="h-5 w-5" />
-                  {cartCount > 0 && (
                       <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
-                        {cartCount}
+                        {cartItems}
                       </Badge>
-                  )}
                 </Button>
               </Link>
 

@@ -169,6 +169,7 @@ app.use('/admin', usersRoutes);
 app.use('/auth', authRoutes);
 app.use('/user', homeRoutes);
 app.use('/user', userProductRoutes);
+app.use('/user', userProductRoutes);
 
 // ✅ CATCH-ALL MUST BE LAST
 app.get('*', (req, res) => {

@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/users.model.js";
 
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
+const JWT_SECRET = "dev-secret-change-me";
 const JWT_EXPIRES_IN = "7d";
 
 const createToken = (user) => {
@@ -100,6 +100,7 @@ export const logIn = async (req, res) => {
         }
 
         const token = createToken(user);
+        const dateOfBirth = user?.role === 'user' ? user?.dob : ''
 
         res.json({
             token,
@@ -109,6 +110,7 @@ export const logIn = async (req, res) => {
                 phone: user.phone,
                 role: user.role,
                 address: user.address,
+                dob: dateOfBirth
             },
         });
     } catch (err) {

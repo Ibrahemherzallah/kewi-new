@@ -1,18 +1,14 @@
 import { useState, useEffect } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
-import { Minus, Plus, Trash2, ShoppingBag, Gift, Star, Tag } from "lucide-react";
+import {Minus, Plus, Trash2, ShoppingBag, Gift, Star, Tag,} from "lucide-react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useLoyalty } from "@/contexts/LoyaltyContext";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import {Dialog, DialogContent, DialogHeader, DialogTitle,} from "@/components/ui/dialog";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,21 +17,52 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 interface CartItem {
   id?: string;
   _id?: string;
-  name: any; // can be string or { en, ar, ... }
-  retailPrice: number;
+  name: any; // string or { en, ar, ... }
+  customerPrice?: number;
+  wholesalerPrice?: number;
+  wholesalePrice?: number;
+  retailPrice?: number;
+  costPrice?: number;
+  salePrice?: number | null;
+  isOnSale?: boolean;
+  isSoldOut?: boolean;
+  image?: string[] | string;
+  images?: string[];
   quantity: number;
-  images: string[];
+  color?: string;
+  variantId?: string;
+}
+
+interface CheckoutFormData {
+  name: string;
+  phone: string;
+  address: string; // here we'll store region label if needed
+  city: string;
+  notes: string;
+}
+
+interface City {
+  name: string;
+  region: "w" | "d" | "q";
+}
+
+interface DeliveryType {
+  name: string; // "مستعجل" | "عادي"
+  duration: string;
 }
 
 const Cart = () => {
   const { t, language } = useLanguage();
   const { toast } = useToast();
-  const { points, getDiscount, redeemFreeProduct, canRedeemFreeProduct } = useLoyalty();
+  const { points, getDiscount, redeemFreeProduct, canRedeemFreeProduct } =
+      useLoyalty();
+
   const [cart, setCart] = useState<CartItem[]>([]);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [freeProductId, setFreeProductId] = useState<string | null>(null);
   const [applyDiscount, setApplyDiscount] = useState(false);
-  const [formData, setFormData] = useState({
+  // const fastName = deliveryTypes[0].name[language]; // "مستعجل" or "Express"
+  const [formData, setFormData] = useState<CheckoutFormData>({
     name: "",
     phone: "",
     address: "",
@@ -43,9 +70,42 @@ const Cart = () => {
     notes: "",
   });
 
+  // Cities / regions
+  const [cities] = useState([
+    { name: { ar: "الضفة الغربية", en: "West Bank" }, region: "w" },
+    { name: { ar: "الداخل", en: "48 Territories" }, region: "d" },
+    { name: { ar: "القدس", en: "Jerusalem" }, region: "q" },
+  ]);
+
+
+  const [deliveryTypes] = useState([
+    {
+      name: { ar: "مستعجل", en: "Express" },
+      duration: { ar: "1 - 2 يوم", en: "1 - 2 days" }
+    },
+    {
+      name: { ar: "عادي", en: "Standard" },
+      duration: { ar: "3 - 5 يوم", en: "3 - 5 days" }
+    }
+  ]);
+
+  const fastName = deliveryTypes[0].name[language]; // "مستعجل" or "Express"
+
+  const [selectedRegion, setSelectedRegion] = useState<string>("");
+  const [selectedType, setSelectedType] = useState<string>("");
+  const [deliveryPrice, setDeliveryPrice] = useState<number>(0);
+
   const discount = getDiscount();
 
-  // Helpers
+  const token =
+      typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const role =
+      typeof window !== "undefined" ? localStorage.getItem("userRole") : null;
+  const isLoggedIn = !!token;
+  const isWholesalerUser = role === "wholesaler";
+
+  // ---------- HELPERS ----------
+
   const getItemId = (item: CartItem): string => item.id || item._id || "";
 
   const getItemName = (item: CartItem): string => {
@@ -60,33 +120,111 @@ const Cart = () => {
     );
   };
 
+  const getItemImages = (item: CartItem): string[] => {
+    const raw = item.images ?? item.image ?? [];
+    if (Array.isArray(raw)) return raw;
+    return raw ? [raw] : [];
+  };
+
+  // unified price logic
+  const getPricesForItem = (item: CartItem) => {
+    const customer =
+        item.customerPrice ?? item.retailPrice ?? item.costPrice ?? 0;
+
+    const wholesale =
+        item.wholesalerPrice ?? item.wholesalePrice ?? customer;
+
+    const sale = item.salePrice ?? null;
+    const isOnSale = !!item.isOnSale;
+
+    let mainPrice = customer;
+    let oldPrice: number | null = null;
+
+    if (isWholesalerUser) {
+      mainPrice = wholesale;
+      oldPrice = customer;
+    } else if (isOnSale && sale != null) {
+      mainPrice = sale;
+      oldPrice = customer;
+    } else {
+      mainPrice = customer;
+      oldPrice = null;
+    }
+
+    return { mainPrice, oldPrice };
+  };
+
+  // ---------- LOAD CART ----------
+
   useEffect(() => {
     const loadCart = () => {
-      const raw = localStorage.getItem("cart") || "[]";
-      const savedCart = JSON.parse(raw);
+      try {
+        const raw = localStorage.getItem("cart") || "[]";
+        const saved = JSON.parse(raw);
 
-      const normalized: CartItem[] = (savedCart as any[]).map((item) => {
-        const rawImages = item.images ?? item.image ?? [];
-        const images = Array.isArray(rawImages)
-            ? rawImages
-            : rawImages
-                ? [rawImages]
-                : [];
+        const normalized: CartItem[] = (saved as any[]).map((item) => {
+          const images = getItemImages(item);
+          return {
+            ...item,
+            images,
+            quantity: item.quantity || 1,
+          };
+        });
 
-        return {
-          ...item,
-          images,
-          quantity: item.quantity || 1,
-        };
-      });
-
-      setCart(normalized);
+        setCart(normalized);
+      } catch (e) {
+        console.error("Error parsing cart:", e);
+        setCart([]);
+      }
     };
 
     loadCart();
     window.addEventListener("storage", loadCart);
     return () => window.removeEventListener("storage", loadCart);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ---------- AUTO-FILL USER DATA WHEN LOGGED IN ----------
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    try {
+      const raw = localStorage.getItem("user");
+      if (!raw) return;
+
+      const user = JSON.parse(raw);
+
+      setFormData((prev) => ({
+        ...prev,
+        name: user.username || user.userName || "",
+        phone: user.phone || "",
+        // requirement (2): address in userdata -> city field
+        city: user.address || "",
+      }));
+    } catch (e) {
+      console.error("Error parsing user from localStorage:", e);
+    }
+  }, [isLoggedIn]);
+
+  // ---------- DELIVERY PRICE LOGIC ----------
+
+  useEffect(() => {
+    if (selectedRegion && selectedType) {
+      const fast = deliveryTypes[0].name[language]; // express in current lang
+
+      if (selectedRegion === "w") {
+        setDeliveryPrice(selectedType === fast ? 20 : 10);
+      } else if (selectedRegion === "d") {
+        setDeliveryPrice(selectedType === fast ? 70 : 50);
+      } else if (selectedRegion === "q") {
+        setDeliveryPrice(selectedType === fast ? 30 : 20);
+      }
+    } else {
+      setDeliveryPrice(0);
+    }
+  }, [selectedRegion, selectedType, language]);
+
 
   const updateCart = (newCart: CartItem[]) => {
     setCart(newCart);
@@ -112,16 +250,19 @@ const Cart = () => {
     updateCart(cart.filter((item) => getItemId(item) !== targetId));
   };
 
-  const subtotal = cart.reduce(
-      (sum, item) => sum + (item.retailPrice || 0) * (item.quantity || 1),
-      0
-  );
+  // ---------- TOTALS / DISCOUNT ----------
 
-  // Calculate discount amount
+  const subtotal = cart.reduce((sum, item) => {
+    const { mainPrice } = getPricesForItem(item);
+    return sum + mainPrice * (item.quantity || 1);
+  }, 0);
+
   const calculateDiscount = () => {
     if (canRedeemFreeProduct && freeProductId) {
       const freeItem = cart.find((item) => getItemId(item) === freeProductId);
-      return freeItem ? freeItem.retailPrice || 0 : 0;
+      if (!freeItem) return 0;
+      const { mainPrice } = getPricesForItem(freeItem);
+      return mainPrice;
     }
     if (applyDiscount && discount.percentage > 0) {
       return (subtotal * discount.percentage) / 100;
@@ -131,24 +272,168 @@ const Cart = () => {
 
   const discountAmount = calculateDiscount();
   const total = subtotal - discountAmount;
+  const grandTotal = total + deliveryPrice;
 
-  const handleCheckout = (e: React.FormEvent) => {
+  // ---------- CHECKOUT ----------
+  const normalizeDelivery = (type: string) => {
+    if (!type) return "";
+
+    const found = deliveryTypes.find(
+        (t) => t.name[language] === type
+    );
+
+    // Always return ARABIC value for backend
+    return found?.name.ar || type;
+  };
+
+  const handleCheckout = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // If using free product redemption, deduct points
-    if (canRedeemFreeProduct && freeProductId) {
-      redeemFreeProduct();
-    }
+    if (cart.length === 0) return;
 
-    updateCart([]);
-    setCheckoutOpen(false);
-    setFreeProductId(null);
-    setApplyDiscount(false);
-    setFormData({ name: "", phone: "", address: "", city: "", notes: "" });
-    toast({
-      title: t("toast.orderPlaced"),
-      description: t("toast.orderDesc"),
-    });
+    try {
+      // ✅ loyalty
+      if (canRedeemFreeProduct && freeProductId) {
+        redeemFreeProduct();
+      }
+
+      // ✅ 1) Build products array (shared between purchase + WhatsApp)
+      const productsPayload = cart.map((item) => {
+        const { mainPrice } = getPricesForItem(item); // unit price
+
+        return {
+          productId: item._id,                 // REAL Mongo product _id
+          id: item.id,                         // composite id (product+variant) for reference if needed
+          name: getItemName(item),
+          quantity: item.quantity || 1,
+          color: (item as any).color || "",
+          variantId: (item as any).variantId || null,
+          price: mainPrice,      // unit price for purchase
+          unitPrice: mainPrice,  // unit price for WhatsApp
+        };
+      });
+
+      // ✅ Total number of items
+      const numOfItems = cart.reduce(
+          (sum, item) => sum + (item.quantity || 1),
+          0
+      );
+
+      // ✅ Totals (بدون / مع توصيل)
+      const totalWithoutDelivery = Number(total.toFixed(2));      // المنتجات فقط
+      const totalWithDelivery = Number(grandTotal.toFixed(2));    // مع التوصيل
+
+      // ✅ 2) Send purchase to backend (addPurchase)
+      const purchaseBody = {
+        cName: formData.name,
+        cNumber: formData.phone,
+        cAddress: formData.city,           // "المدينة"
+        cCity: formData.address || "",     // "المنطقة" (region dropdown)
+        delivery: normalizeDelivery(selectedType),
+        notes: formData.notes,
+        products: productsPayload,
+        totalPrice: totalWithoutDelivery,  // السعر الإجمالي بدون توصيل
+        numOfItems,
+      };
+
+      const token =
+          typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+      const purchaseRes = await fetch("http://localhost:5001/user/purchase", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(purchaseBody),
+      });
+
+      if (!purchaseRes.ok) {
+        const errData = await purchaseRes.json().catch(() => null);
+        throw new Error(errData?.message || "فشل في إرسال الطلب");
+      }
+
+      // ✅ 3) Update stock for each product (uses variant if exists)
+      for (const item of cart) {
+        const stockRes = await fetch(
+            "http://localhost:5001/user/product/update-stock",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                id: item._id,                    // REAL product id
+                quantity: item.quantity || 1,
+                color: (item as any).color || "",
+                variantId: (item as any).variantId || null,
+              }),
+            }
+        );
+
+        const stockData = await stockRes.json().catch(() => null);
+
+        if (!stockRes.ok) {
+          throw new Error(
+              stockData?.message ||
+              `فشل في تحديث مخزون المنتج ${getItemName(item)}`
+          );
+        }
+      }
+
+      // ✅ 4) Send WhatsApp message (sendWhatsAppMessage)
+      const whatsappBody = {
+        cName: formData.name,
+        cNumber: formData.phone,
+        cAddress: formData.city,           // في الرسالة كـ "المدينة"
+        cCity: formData.address || "",     // في الرسالة كـ "المنطقة"
+        notes: formData.notes,
+        price: totalWithDelivery,          // إذا حاب تشوف المبلغ مع التوصيل
+        totalPrice: totalWithoutDelivery,  // المستعمل حالياً في الرسالة
+        numOfItems,
+        delivery: normalizeDelivery(selectedType),
+        type: isWholesalerUser ? "تاجر" : "زبون",
+        products: productsPayload,         // يحتوي على color + variantId + unitPrice
+      };
+
+      const waRes = await fetch(
+          "http://localhost:5001/user/purchase/send-whatsapp",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(whatsappBody),
+          }
+      );
+
+      if (!waRes.ok) {
+        const waErr = await waRes.json().catch(() => null);
+        throw new Error(waErr?.message || "فشل في إرسال رسالة واتساب");
+      }
+
+      // ✅ 5) Clear cart + reset UI
+      updateCart([]);
+      setCheckoutOpen(false);
+      setFreeProductId(null);
+      setApplyDiscount(false);
+      setFormData({ name: "", phone: "", address: "", city: "", notes: "" });
+      setSelectedRegion("");
+      setSelectedType("");
+      setDeliveryPrice(0);
+
+      toast({
+        title: t("toast.orderPlaced"),
+        description: t("toast.orderDesc"),
+      });
+    } catch (err: any) {
+      console.error("Error sending order:", err);
+      toast({
+        title: language === "ar" ? "حدث خطأ" : "Something went wrong",
+        description:
+            err?.message ||
+            (language === "ar"
+                ? "حدث خطأ أثناء إرسال الطلب"
+                : "An error occurred while sending your order"),
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSelectFreeProduct = (productId: string) => {
@@ -161,13 +446,37 @@ const Cart = () => {
     setFreeProductId(null); // Can't use both
   };
 
-  console.log("The cart is L ", cart)
+  // ---------- RENDER ----------
+
   return (
       <div className="min-h-screen bg-background">
         <Navbar cartCount={cart.length} />
 
         <div className="container mx-auto px-4 py-12">
-          <h1 className="text-4xl font-bold mb-8">{t("cart.title")}</h1>
+          <h1 className="text-4xl font-bold mb-4">{t("cart.title")}</h1>
+
+          {/* Guest banner */}
+          {!isLoggedIn && (
+              <div className="mb-8 p-4 rounded-2xl bg-primary/10 border border-primary/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div>
+                  <p className="font-semibold">
+                    {language === "ar"
+                        ? "انضم إلينا لتحصل على مزايا الاشتراك"
+                        : "Sign up to unlock member benefits"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {language === "ar"
+                        ? "سجّل حساباً لتحصل على نقاط مع كل عملية شراء، خصومات حصرية وهدايا مجانية."
+                        : "Create an account to earn points on every order, get exclusive discounts, and unlock free gifts."}
+                  </p>
+                </div>
+                <Link to="/signup">
+                  <Button size="sm" className="whitespace-nowrap">
+                    {language === "ar" ? "إنشاء حساب" : "Create account"}
+                  </Button>
+                </Link>
+              </div>
+          )}
 
           {cart.length === 0 ? (
               <div className="text-center py-16">
@@ -181,35 +490,47 @@ const Cart = () => {
               </div>
           ) : (
               <div className="grid lg:grid-cols-3 gap-8">
+                {/* Items */}
                 <div className="lg:col-span-2 space-y-4">
                   {cart.map((item) => {
                     const id = getItemId(item);
+                    const images = getItemImages(item);
+                    const { mainPrice, oldPrice } = getPricesForItem(item);
+
                     return (
-                        <div key={id} className="bg-card border border-border rounded-2xl p-6 flex gap-4 relative">
+                        <div
+                            key={id}
+                            className="bg-card border border-border rounded-2xl p-6 flex gap-4 relative"
+                        >
                           {freeProductId === id && (
                               <Badge className="absolute top-2 left-2 bg-primary">
                                 <Gift className="h-3 w-3 mr-1" />
                                 {language === "ar" ? "مجاني!" : "FREE!"}
                               </Badge>
                           )}
+
                           <img
-                              src={item.images?.[0]}
+                              src={images[0]}
                               alt={getItemName(item)}
                               className="w-24 h-24 object-cover rounded-lg"
                           />
+
                           <div className="flex-1">
                             <h3 className="font-semibold text-lg mb-2">
                               {getItemName(item)}
                             </h3>
-                            <p className="text-primary font-bold">
-                              {freeProductId === id ? (
-                                  <span className="line-through text-muted-foreground">
-                            ${item?.retailPrice?.toFixed(2)}
+
+                            <div className="space-x-2 space-y-1">
+                        <span className="text-primary font-bold text-lg">
+                          {mainPrice.toFixed(2)} ₪
+                        </span>
+                              {oldPrice != null && oldPrice !== mainPrice && (
+                                  <span className="text-sm text-muted-foreground line-through">
+                            {oldPrice.toFixed(2)} ₪
                           </span>
-                              ) : (
-                                  `$${item?.retailPrice?.toFixed(2)}`
                               )}
-                            </p>
+                            </div>
+
                             <div className="flex items-center gap-2 mt-4">
                               <Button
                                   variant="outline"
@@ -230,6 +551,7 @@ const Cart = () => {
                               </Button>
                             </div>
                           </div>
+
                           <Button
                               variant="ghost"
                               size="icon"
@@ -243,6 +565,7 @@ const Cart = () => {
                   })}
                 </div>
 
+                {/* Right column: loyalty + summary */}
                 <div className="lg:col-span-1 space-y-4">
                   {/* Loyalty Points Banner */}
                   <div className="bg-gradient-to-br from-primary/10 to-secondary/10 border border-primary/20 rounded-2xl p-4">
@@ -254,8 +577,16 @@ const Cart = () => {
                       <Badge variant="secondary">{points} pts</Badge>
                     </div>
 
+                    {!isLoggedIn && (
+                        <p className="text-xs text-muted-foreground mb-2">
+                          {language === "ar"
+                              ? "سجّل دخولك أو أنشئ حساباً لبدء جمع النقاط."
+                              : "Log in or create an account to start collecting points."}
+                        </p>
+                    )}
+
                     {/* Free Product Option */}
-                    {canRedeemFreeProduct && (
+                    {isLoggedIn && canRedeemFreeProduct && (
                         <div className="mb-3 p-3 bg-background/60 rounded-lg">
                           <p className="text-sm font-medium mb-2 flex items-center gap-1">
                             <Gift className="h-4 w-4 text-primary" />
@@ -269,15 +600,18 @@ const Cart = () => {
                           >
                             {cart.map((item) => {
                               const id = getItemId(item);
+                              const { mainPrice } = getPricesForItem(item);
                               return (
-                                  <div key={id} className="flex items-center space-x-2">
+                                  <div
+                                      key={id}
+                                      className="flex items-center space-x-2"
+                                  >
                                     <RadioGroupItem value={id} id={`free-${id}`} />
                                     <Label
                                         htmlFor={`free-${id}`}
                                         className="text-sm cursor-pointer"
                                     >
-                                      {getItemName(item)} ($
-                                      {item.retailPrice.toFixed(2)})
+                                      {getItemName(item)} ({mainPrice.toFixed(2)} ₪)
                                     </Label>
                                   </div>
                               );
@@ -287,7 +621,8 @@ const Cart = () => {
                     )}
 
                     {/* Percentage Discount Option */}
-                    {discount.percentage > 0 &&
+                    {isLoggedIn &&
+                        discount.percentage > 0 &&
                         discount.type === "discount" &&
                         !freeProductId && (
                             <div className="p-3 bg-background/60 rounded-lg">
@@ -320,11 +655,13 @@ const Cart = () => {
 
                   {/* Order Summary */}
                   <div className="bg-card border border-border rounded-2xl p-6 sticky top-24">
-                    <h2 className="text-2xl font-bold mb-6">{t("cart.total")}</h2>
+                    <h2 className="text-2xl font-bold mb-6">
+                      {t("cart.total")}
+                    </h2>
                     <div className="space-y-3 mb-6">
                       <div className="flex justify-between text-muted-foreground">
                         <span>{t("cart.subtotal")}</span>
-                        <span>${subtotal.toFixed(2)}</span>
+                        <span>{subtotal.toFixed(2)} ₪</span>
                       </div>
 
                       {discountAmount > 0 && (
@@ -339,13 +676,22 @@ const Cart = () => {
                                 ? `خصم ${discount.percentage}%`
                                 : `${discount.percentage}% discount`}
                       </span>
-                            <span>- ${discountAmount.toFixed(2)}</span>
+                            <span>- {discountAmount.toFixed(2)} ₪</span>
                           </div>
                       )}
 
+                      <div className="flex justify-between text-muted-foreground">
+                    <span>
+                      {language === "ar" ? "سعر التوصيل" : "Delivery"}
+                    </span>
+                        <span>{deliveryPrice.toFixed(2)} ₪</span>
+                      </div>
+
                       <div className="border-t border-border pt-3 flex justify-between text-xl font-bold">
                         <span>{t("cart.total")}</span>
-                        <span className="text-primary">${total.toFixed(2)}</span>
+                        <span className="text-primary">
+                      {grandTotal.toFixed(2)} ₪
+                    </span>
                       </div>
                     </div>
                     <Button
@@ -361,33 +707,148 @@ const Cart = () => {
           )}
         </div>
 
-        {/* Checkout dialog stays the same, only using `total` + `discountAmount` */}
+        {/* Checkout dialog */}
         <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{t("checkout.title")}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCheckout} className="space-y-4">
-              {/* form fields unchanged ... */}
-              {/* ... */}
-              {discountAmount > 0 && (
-                  <div className="bg-primary/10 rounded-lg p-3">
-                    <p className="text-sm font-medium flex items-center gap-2">
-                      <Gift className="h-4 w-4 text-primary" />
-                      {freeProductId
+              <div>
+                <Label htmlFor="name">{t("checkout.name")}</Label>
+                <Input
+                    id="name"
+                    required
+                    value={formData.name}
+                    onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                    }
+                />
+              </div>
+              <div>
+                <Label htmlFor="phone">{t("checkout.phone")}</Label>
+                <Input
+                    dir={language == 'ar' ? 'rtl' : 'ltr'}
+                    id="phone"
+                    type="tel"
+                    required
+                    value={formData.phone}
+                    onChange={(e) =>
+                        setFormData({ ...formData, phone: e.target.value })
+                    }
+                />
+              </div>
+              <div>
+                <Label htmlFor="city">{t("checkout.city")}</Label>
+                <Input
+                    id="city"
+                    required
+                    value={formData.city}
+                    onChange={(e) =>
+                        setFormData({ ...formData, city: e.target.value })
+                    }
+                />
+              </div>
+
+              {/* Region dropdown instead of address textarea */}
+              <div>
+                <Label htmlFor="region">
+                  {language === "ar" ? "المنطقة" : "Region"}
+                </Label>
+
+                <select
+                    id="region"
+                    required
+                    className="w-full border border-input rounded-md px-3 py-2 bg-background text-sm"
+                    value={selectedRegion}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSelectedRegion(value);
+
+                      const cityObj = cities.find((c) => c.region === value);
+
+                      setFormData((prev) => ({
+                        ...prev,
+                        address: cityObj ? cityObj.name[language] : "",
+                      }));
+                    }}
+                >
+                  <option value="">
+                    {language === "ar" ? "اختر المنطقة" : "Select region"}
+                  </option>
+
+                  {cities.map((c) => (
+                      <option key={c.region} value={c.region}>
+                        {c.name[language]}
+                      </option>
+                  ))}
+                </select>
+              </div>
+
+
+              {/* Delivery type */}
+              <div>
+                <Label htmlFor="deliveryType">
+                  {language === "ar" ? "نوع التوصيل" : "Delivery Type"}
+                </Label>
+
+                <select
+                    id="deliveryType"
+                    required
+                    className="w-full border border-input rounded-md px-3 py-2 bg-background text-sm"
+                    value={selectedType}
+                    onChange={(e) => setSelectedType(e.target.value)}
+                >
+                  <option value="">
+                    {language === "ar" ? "اختر نوع التوصيل" : "Select delivery type"}
+                  </option>
+
+                  {deliveryTypes.map((type) => (
+                      <option key={type.name.ar} value={type.name[language]}>
+                        {type.name[language]} ({type.duration[language]})
+                      </option>
+                  ))}
+                </select>
+              </div>
+
+
+              <div>
+                <Label htmlFor="notes">{t("checkout.notes")}</Label>
+                <Textarea
+                    id="notes"
+                    value={formData.notes}
+                    onChange={(e) =>
+                        setFormData({ ...formData, notes: e.target.value })
+                    }
+                />
+              </div>
+
+              {/* Summary inside dialog */}
+              <div className="bg-primary/10 rounded-lg p-3 space-y-1">
+                <p className="text-sm font-medium flex items-center gap-2">
+                  <Gift className="h-4 w-4 text-primary" />
+                  {discountAmount > 0
+                      ? freeProductId
                           ? language === "ar"
                               ? "يتضمن منتج مجاني!"
                               : "Includes a free product!"
                           : language === "ar"
                               ? `خصم ${discount.percentage}% مطبق`
-                              : `${discount.percentage}% discount applied`}
-                    </p>
-                    <p className="text-lg font-bold text-primary">
-                      {language === "ar" ? "الإجمالي:" : "Total:"} $
-                      {total.toFixed(2)}
-                    </p>
-                  </div>
-              )}
+                              : `${discount.percentage}% discount applied`
+                      : language === "ar"
+                          ? "الإجمالي يشمل التوصيل"
+                          : "Total includes delivery"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {language === "ar"
+                      ? `سعر التوصيل: ${deliveryPrice.toFixed(2)} ₪`
+                      : `Delivery: ${deliveryPrice.toFixed(2)} ₪`}
+                </p>
+                <p className="text-lg font-bold text-primary">
+                  {language === "ar" ? "الإجمالي:" : "Total:"}{" "}
+                  {grandTotal.toFixed(2)} ₪
+                </p>
+              </div>
 
               <div className="flex gap-3 pt-4">
                 <Button

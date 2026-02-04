@@ -1,9 +1,34 @@
-import { Link } from "react-router-dom";
+import {Link, useNavigate} from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Package, ShoppingBag, BarChart3, Users, ArrowLeft, Tag, FolderTree, Building2, ClipboardList } from "lucide-react";
+import {
+  Package,
+  ShoppingBag,
+  BarChart3,
+  Users,
+  ArrowLeft,
+  Tag,
+  FolderTree,
+  Building2,
+  ClipboardList,
+  LogOut
+} from "lucide-react";
+import {useLanguage} from "@/contexts/LanguageContext.tsx";
+
+
 
 const AdminDashboard = () => {
+
+  const navigate = useNavigate();
+  const { language } = useLanguage();
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("user");
+    navigate("/");
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-12">
@@ -12,12 +37,19 @@ const AdminDashboard = () => {
             <h1 className="text-4xl font-bold mb-2">Admin Dashboard</h1>
             <p className="text-muted-foreground">Manage your Kewi store</p>
           </div>
-          <Link to="/">
-            <Button variant="outline">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Store
+          <div className={`flex gap-3`}>
+            {/*<Link to="/">*/}
+            {/*  <Button variant="outline">*/}
+            {/*    <ArrowLeft className="mr-2 h-4 w-4" />*/}
+            {/*    Back to Store*/}
+            {/*  </Button>*/}
+            {/*</Link>*/}
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="h-4 w-4 mr-1" />
+              {language === "ar" ? "تسجيل الخروج" : "Logout"}
             </Button>
-          </Link>
+          </div>
+
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
