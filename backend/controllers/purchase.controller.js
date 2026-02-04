@@ -1,5 +1,7 @@
 import Purchase from '../models/purchase.model.js';
 import Product from "../models/product.model.js";
+import User from "../models/users.model.js";
+
 import twilio from 'twilio';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -26,11 +28,13 @@ export const addPurchase = async (req, res) => {
         delivery,
         notes,
         id,
-        products, // includes { productId, quantity, color, price }
+        products, // includes { productId, quantity, color, price, variantId }
         totalPrice,
         numOfItems,
     } = req.body;
-    console.log("TOTAL PRICE IS : " , totalPrice);
+
+    console.log("TOTAL PRICE IS : ", totalPrice);
+
     try {
         const newPurchase = new Purchase({
             fullName: cName,
@@ -43,10 +47,45 @@ export const addPurchase = async (req, res) => {
             price: totalPrice, // frontend calculated
             totalPrice,
             numOfItems,
-            products, // now includes price + color
+            products,
         });
 
         await newPurchase.save();
+
+        // 🆕 If this purchase belongs to a logged-in user, add to their order history
+        try {
+            let user = null;
+
+            // Prefer req.userId from JWT (route protected by requireAuth)
+            console.log("req.userId is: " ,req.userId)
+            if (req.userId) {
+                user = await User.findByIdAndUpdate(
+                    req.userId,
+                    { $push: { orderHistory: newPurchase._id } },
+                    { new: true }
+                );
+            } else {
+                // Optional fallback: try to match by phone number
+                user = await User.findOneAndUpdate(
+                    { phone: cNumber },
+                    { $push: { orderHistory: newPurchase._id } },
+                    { new: true }
+                );
+            }
+
+            if (user) {
+                console.log(
+                    `Added purchase ${newPurchase._id} to user ${user._id} orderHistory`
+                );
+            } else {
+                console.log(
+                    "No matching user found for this purchase (guest checkout or phone not registered)."
+                );
+            }
+        } catch (userErr) {
+            console.error("Error updating user order history:", userErr);
+            // don't fail the whole request if just history update fails
+        }
 
         res.status(201).json({
             message: "تم إضافة الشراء بنجاح",
@@ -62,35 +101,90 @@ export const addPurchase = async (req, res) => {
 };
 
 
-
 export const updateStock = async (req, res) => {
-    const { id, quantity } = req.body;
+    const { id, quantity, color, variantId } = req.body;
 
     try {
         const product = await Product.findById(id);
 
         if (!product) {
-            return res.status(404).json({ message: 'المنتج غير موجود' });
+            return res.status(404).json({ message: "المنتج غير موجود" });
         }
-        let remainingStock = product.stockNumber - quantity
-        if (remainingStock < 0){
-            return res.status(404).json({ message: `كمية غير كافية من منتج ${product.name}` });
-        }
-        else if (remainingStock === 0){
-            product.isSoldOut = true;
-        }
-        product.stockNumber -= quantity;
 
+        const qty = Number(quantity) || 0;
+        if (qty <= 0) {
+            return res.status(400).json({ message: "الكمية غير صحيحة" });
+        }
+
+        // If product has variants and we know which color/variant was sold
+        if (product.isMultiColor && product.variants && product.variants.length > 0) {
+            // Find variant either by variantId or by color
+            let variant = null;
+
+            if (variantId) {
+                variant = product.variants.id(variantId);
+            }
+
+            if (!variant && color) {
+                variant = product.variants.find((v) => v.color === color);
+            }
+
+            if (!variant) {
+                return res.status(400).json({
+                    message: "اللون المحدد غير موجود لهذا المنتج",
+                });
+            }
+
+            const remainingVariantStock = variant.stockNumber - qty;
+
+            if (remainingVariantStock < 0) {
+                return res.status(400).json({
+                    message: `كمية غير كافية من منتج ${product.name} بلون ${variant.color}`,
+                });
+            }
+
+            variant.stockNumber = remainingVariantStock;
+
+            // Also update global stockNumber (optional but recommended)
+            const totalVariantStock = product.variants.reduce(
+                (sum, v) => sum + (v.stockNumber || 0),
+                0
+            );
+            product.stockNumber = totalVariantStock;
+
+            if (totalVariantStock <= 0) {
+                product.isSoldOut = true;
+            }
+        } else {
+            // Old behavior: simple product without variants
+            const remainingStock = product.stockNumber - qty;
+
+            if (remainingStock < 0) {
+                return res.status(400).json({
+                    message: `كمية غير كافية من منتج ${product.name}`,
+                });
+            }
+
+            product.stockNumber = remainingStock;
+
+            if (remainingStock === 0) {
+                product.isSoldOut = true;
+            }
+        }
 
         await product.save();
 
-        res.status(200).json({ message: 'تم تحديث المخزون بنجاح', product });
+        res
+            .status(200)
+            .json({ message: "تم تحديث المخزون بنجاح", product });
     } catch (error) {
-        console.error('Error updating stock:', error);
-        res.status(500).json({ message: 'فشل في تحديث المخزون', error: error.message });
+        console.error("Error updating stock:", error);
+        res.status(500).json({
+            message: "فشل في تحديث المخزون",
+            error: error.message,
+        });
     }
 };
-
 
 
 
@@ -129,7 +223,7 @@ ${productsMessage}
     try {
         const response = await client.messages.create({
             from: `whatsapp:${process.env.TWILIO_WHATSAPP_FROM}`,
-            to: 'whatsapp:+972567758087',
+            to: 'whatsapp:+972597250539',
             body: message,
         });
 

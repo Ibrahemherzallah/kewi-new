@@ -26,19 +26,24 @@ type BackendCategory = {
   image?: string;
 };
 
+// Match your Mongo product as much as possible
 type BackendProduct = {
   _id: string;
-  name?: string;
-  description?: string;      // 👈 add this
-  id?: string;          // your internal ID
-  image?: string[];
+  id?: string; // your internal code "9999" etc.
+  name?: string | { en: string; ar: string };
+  description?: string | { en: string; ar: string };
+  image?: string[];     // from DB
+  images?: string[];    // in case some endpoints use this
   stockNumber?: number;
   customerPrice?: number;
   wholesalerPrice?: number;
-  salePrice?: number | null;
+  salePrice?: number;
+  isOnSale?: boolean;
+  isSoldOut?: boolean;
   gender?: string;
   size?: string;
   color?: string;
+  brand?: string | { name: string };
 };
 
 // 👇 This matches what ProductCard expects (like mockProducts)
@@ -63,7 +68,7 @@ const Home = () => {
   const { t, language } = useLanguage();
 
   const [categories, setCategories] = useState<BackendCategory[]>([]);
-  const [featuredProducts, setFeaturedProducts] = useState<UiProduct[]>([]);
+  const [featuredProducts, setFeaturedProducts] = useState<BackendProduct[]>([]);
   const [loading, setLoading] = useState(false);
 
   // 🔹 Fetch categories + products
@@ -85,41 +90,10 @@ const Home = () => {
         if (prodRes.ok) {
           const prods: BackendProduct[] = await prodRes.json();
 
-          // Take first 4 as featured
-          const top = (prods || []).slice(0, 4);
+          // Take first 4 as featured, but keep REAL shape
+          const top = (prods || []).slice(0, 4).filter(Boolean);
 
-          const mapped: UiProduct[] = top
-              .filter((p) => !!p)
-              .map((p) => {
-                const baseName = p.name || "منتج بدون اسم";
-                const baseDesc = p.description || "";
-                const images =
-                    p.image && p.image.length > 0 ? p.image : [placeholderImage];
-
-                return {
-                  id: p._id,
-                  name: {
-                    en: baseName,   // 👈 same text for now
-                    ar: baseName,
-                  },
-                  description: {
-                    en: baseDesc,
-                    ar: baseDesc,
-                  },
-                  images,
-                  sku: p.id || "",
-                  barcode: p.id || "",
-                  warehouseQty: p.stockNumber ?? 0,
-                  kewiQty: 0,
-                  costPrice: p.wholesalerPrice ?? 0,
-                  retailPrice: p.customerPrice ?? 0,
-                  wholesalePrice: p.wholesalerPrice ?? 0,
-                  brand: "", // or map from p.brandId if you have it
-                };
-              });
-
-
-          setFeaturedProducts(mapped);
+          setFeaturedProducts(top);
         }
       } catch (err) {
         console.error("Error loading home data:", err);
@@ -132,9 +106,24 @@ const Home = () => {
   }, []);
 
 
-  const handleAddToCart = (product: UiProduct) => {
+// helper to get localized name from backend product
+  const getProductName = (product: BackendProduct, language: string) => {
+    if (!product.name) return language === "ar" ? "منتج بدون اسم" : "Unnamed product";
+    if (typeof product.name === "string") return product.name;
+
+    return (
+        product.name[language] ||
+        product.name.en ||
+        Object.values(product.name)[0] ||
+        ""
+    );
+  };
+
+  const handleAddToCart = (product: BackendProduct) => {
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-    const existingItem = cart.find((item: any) => item.id === product.id);
+
+    // note: use _id to match DB everywhere
+    const existingItem = cart.find((item: any) => item._id === product._id);
 
     if (existingItem) {
       existingItem.quantity += 1;
@@ -144,17 +133,14 @@ const Home = () => {
 
     localStorage.setItem("cart", JSON.stringify(cart));
 
-    // product.name is always { en, ar } now
-    const productName =
-        language === "ar" ? product.name.ar : product.name.en;
+    const productName = getProductName(product, language);
 
     toast({
       title: t("toast.addedToCart"),
       description: `${productName} ${t("toast.addedDesc")}`,
     });
   };
-
-  console.log("featuredProducts is : , " , featuredProducts)
+  console.log("sssssssssssssssssss featuredProducts is : , " , featuredProducts)
   return (
       <div className="min-h-screen bg-background">
         <Navbar cartCount={0} />
@@ -260,15 +246,13 @@ const Home = () => {
                 </p>
             ) : (
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {featuredProducts
-                      .filter((p) => p && p.name) // safety
-                      .map((product) => (
-                          <ProductCard
-                              key={product.id}
-                              product={product}
-                              onAddToCart={handleAddToCart}
-                          />
-                      ))}
+                  {featuredProducts.map((product) => (
+                      <ProductCard
+                          key={product._id || product.id}
+                          product={product}
+                          onAddToCart={handleAddToCart}
+                      />
+                  ))}
                 </div>
             )}
 
