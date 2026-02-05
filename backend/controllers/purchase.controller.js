@@ -33,7 +33,7 @@ export const addPurchase = async (req, res) => {
         numOfItems,
     } = req.body;
 
-    console.log("TOTAL PRICE IS : ", totalPrice);
+    console.log("products IS : ", products);
 
     try {
         const newPurchase = new Purchase({
@@ -95,6 +95,52 @@ export const addPurchase = async (req, res) => {
         console.error("Error creating purchase:", error);
         res.status(500).json({
             message: "فشل في إضافة الشراء",
+            error: error.message,
+        });
+    }
+};
+
+export const updateOrderStatus = async (req, res) => {
+    console.log("testt")
+    try {
+        const { id } = req.params;
+        const { action } = req.body; // 'confirm' | 'ship' | 'deliver'
+
+        const order = await Purchase.findById(id);
+        if (!order) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        if (action === "confirm") {
+            // admin confirmed with customer by phone
+            if (order.orderStatus === "ordered") {
+                order.orderStatus = "confirmed";
+                order.confirmedAt = new Date();
+            }
+        } else if (action === "ship") {
+            // admin handed to delivery company
+            if (order.orderStatus === "ordered" || order.orderStatus === "confirmed") {
+                order.orderStatus = "shipped";
+                if (!order.confirmedAt) order.confirmedAt = new Date();
+                order.shippedAt = new Date();
+            }
+        } else if (action === "deliver") {
+            // later: user marks as received
+            if (order.orderStatus === "shipped" || order.orderStatus === "confirmed") {
+                order.orderStatus = "delivered";
+                order.deliveredAt = new Date();
+            }
+        } else {
+            return res.status(400).json({ message: "Invalid action" });
+        }
+
+        await order.save();
+
+        res.json(order);
+    } catch (error) {
+        console.error("Error updating order status:", error);
+        res.status(500).json({
+            message: "Failed to update order status",
             error: error.message,
         });
     }

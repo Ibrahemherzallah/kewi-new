@@ -24,12 +24,18 @@ interface Purchase {
   streetAddress?: string;
   deliveryType?: string;
   notes?: string;
-  price: number;         // or totalPrice, depending on how you use it
+  price: number;
   totalPrice: number;
   numOfItems?: number;
   products: PurchaseProduct[];
   createdAt: string;
   updatedAt: string;
+
+  // 🆕 status fields
+  orderStatus?: "ordered" | "confirmed" | "shipped" | "delivered";
+  confirmedAt?: string;
+  shippedAt?: string;
+  deliveredAt?: string;
 }
 
 const API_BASE = "http://localhost:5001"; // 🔁 change if needed
@@ -81,18 +87,51 @@ const AdminOrders = () => {
     fetchOrders();
   }, []);
 
-  const handleToggleComplete = (orderId: string) => {
-    setCompletedOrders((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(orderId)) {
-        newSet.delete(orderId);
-      } else {
-        newSet.add(orderId);
+  const handleUpdateStatus = async (orderId: string, action: "confirm" | "ship") => {
+    try {
+      const res = await fetch(`${API_BASE}/user/purchase/${orderId}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.message || "Failed to update status");
       }
-      return newSet;
-    });
+
+      const updated: Purchase = await res.json();
+
+      setOrders((prev) =>
+          prev.map((o) => (o._id === orderId ? updated : o))
+      );
+    } catch (err: any) {
+      console.error("Status update error:", err);
+      alert(err?.message || "Error updating order status");
+    }
   };
 
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!confirm("Are you sure you want to delete this order?")) return;
+
+    try {
+      const res = await fetch(`http://localhost:5001/admin/orders/${orderId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.message || "Failed to delete order");
+      }
+
+      // Remove from UI
+      setOrders((prev) => prev.filter((o) => o._id !== orderId));
+
+    } catch (err: any) {
+      console.error("Delete error:", err);
+      alert(err?.message || "Error deleting order");
+    }
+  };
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Delivered":
@@ -123,6 +162,7 @@ const AdminOrders = () => {
     );
   });
 
+  console.log("The selectedOrder is : ", selectedOrder)
   return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-12">
@@ -141,10 +181,10 @@ const AdminOrders = () => {
               </div>
             </div>
             {/* You can turn this into "Export" or something later */}
-            <Button disabled>
-              {/* <Plus className="mr-2 h-4 w-4" /> */}
-              New Order
-            </Button>
+            {/*<Button disabled>*/}
+            {/*  /!* <Plus className="mr-2 h-4 w-4" /> *!/*/}
+            {/*  New Order*/}
+            {/*</Button>*/}
           </div>
 
           <Card className="p-6">
@@ -181,8 +221,8 @@ const AdminOrders = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Complete</TableHead>
-                      <TableHead>Order ID</TableHead>
+                      <TableHead>Confirmed</TableHead>
+                      <TableHead>Shipped</TableHead>
                       <TableHead>Customer</TableHead>
                       <TableHead>Phone</TableHead>
                       <TableHead>City</TableHead>
@@ -200,20 +240,31 @@ const AdminOrders = () => {
 
                       return (
                           <TableRow key={order._id}>
+                            {/* Confirmed checkbox */}
                             <TableCell>
                               <Checkbox
-                                  checked={completedOrders.has(order._id)}
-                                  onCheckedChange={() =>
-                                      handleToggleComplete(order._id)
+                                  checked={
+                                      order.orderStatus === "confirmed" ||
+                                      order.orderStatus === "shipped" ||
+                                      order.orderStatus === "delivered"
                                   }
+                                  disabled={order.orderStatus !== "ordered"} // only clickable when new
+                                  onCheckedChange={() => handleUpdateStatus(order._id, "confirm")}
                               />
                             </TableCell>
-                            <TableCell className="font-medium">
-                              <div className="flex items-center gap-2">
-                                <ClipboardList className="h-4 w-4 text-muted-foreground" />
-                                {order._id}
-                              </div>
+
+                            {/* Shipped checkbox */}
+                            <TableCell>
+                              <Checkbox
+                                  checked={
+                                      order.orderStatus === "shipped" ||
+                                      order.orderStatus === "delivered"
+                                  }
+                                  disabled={order.orderStatus !== "confirmed"} // only after confirm
+                                  onCheckedChange={() => handleUpdateStatus(order._id, "ship")}
+                              />
                             </TableCell>
+
                             <TableCell>{order.fullName}</TableCell>
                             <TableCell>{order.phoneNumber}</TableCell>
                             <TableCell>{order.city}</TableCell>
@@ -222,12 +273,36 @@ const AdminOrders = () => {
                               {order?.totalPrice?.toFixed(2)} ₪
                             </TableCell>
                             <TableCell>{order.deliveryType}</TableCell>
+
                             <TableCell>
-                              <Button variant="outline" size="sm" onClick={() => openOrderDrawer(order)}>
+                              {order.orderStatus === "delivered"
+                                  ? "Delivered"
+                                  : order.orderStatus === "shipped"
+                                      ? "Shipped"
+                                      : order.orderStatus === "confirmed"
+                                          ? "Confirmed"
+                                          : "Ordered"}
+                            </TableCell>
+
+                            <TableCell className="flex gap-2">
+                              <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openOrderDrawer(order)}
+                              >
                                 View
+                              </Button>
+
+                              <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => handleDeleteOrder(order._id)}
+                              >
+                                Delete
                               </Button>
                             </TableCell>
                           </TableRow>
+
                       );
                     })}
                   </TableBody>
@@ -237,7 +312,7 @@ const AdminOrders = () => {
         </div>
         {/* Order Details Drawer */}
         <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
-          <DrawerContent className="p-6 max-h-[85vh] overflow-y-auto">
+          <DrawerContent className="p-6 max-h-[95vh]">
             {selectedOrder && (
                 <>
                   <DrawerHeader>
@@ -245,43 +320,47 @@ const AdminOrders = () => {
                       Order Details – {selectedOrder._id}
                     </DrawerTitle>
                   </DrawerHeader>
+                  <div className={'max-h-[500px] overflow-y-auto'}>
+                    {/* Customer Info */}
+                    <div className="space-y-2 mb-6">
+                      <h2 className="text-lg font-semibold">Customer Information</h2>
+                      <p><strong>Name:</strong> {selectedOrder.fullName}</p>
+                      <p><strong>Phone:</strong> {selectedOrder.phoneNumber}</p>
+                      <p><strong>City:</strong> {selectedOrder.city}</p>
+                      <p><strong>Address:</strong> {selectedOrder.streetAddress}</p>
+                      <p><strong>Delivery:</strong> {selectedOrder.deliveryType}</p>
+                      {selectedOrder.notes && (
+                          <p><strong>Notes:</strong> {selectedOrder.notes}</p>
+                      )}
+                    </div>
 
-                  {/* Customer Info */}
-                  <div className="space-y-2 mb-6">
-                    <h2 className="text-lg font-semibold">Customer Information</h2>
-                    <p><strong>Name:</strong> {selectedOrder.fullName}</p>
-                    <p><strong>Phone:</strong> {selectedOrder.phoneNumber}</p>
-                    <p><strong>City:</strong> {selectedOrder.city}</p>
-                    <p><strong>Address:</strong> {selectedOrder.streetAddress}</p>
-                    <p><strong>Delivery:</strong> {selectedOrder.deliveryType}</p>
-                    {selectedOrder.notes && (
-                        <p><strong>Notes:</strong> {selectedOrder.notes}</p>
-                    )}
-                  </div>
+                    {/* Products */}
+                    <div className="space-y-4">
+                      <h2 className="text-lg font-semibold">Products</h2>
 
-                  {/* Products */}
-                  <div className="space-y-4">
-                    <h2 className="text-lg font-semibold">Products</h2>
+                      {selectedOrder.products.map((p, index) => (
+                          <div
+                              key={index}
+                              className="border border-border rounded-lg p-4 bg-card"
+                          >
+                            {/*testtttt*/}
+                            <p><strong>Product ID:</strong> {p.id}</p>
+                            <p><strong>Product Name:</strong> {p.name}</p>
+                            <p><strong>Quantity:</strong> {p.quantity}</p>
+                            <p><strong>Color:</strong> {p.color || "—"}</p>
+                            <p><strong>Variant ID:</strong> {p.variantId || "—"}</p>
+                            <p><strong>Unit Price:</strong> {p.price?.toFixed(2)} ₪</p>
+                          </div>
+                      ))}
+                    </div>
 
-                    {selectedOrder.products.map((p, index) => (
-                        <div
-                            key={index}
-                            className="border border-border rounded-lg p-4 bg-card"
-                        >
-                          <p><strong>Product ID:</strong> {p.productId}</p>
-                          <p><strong>Quantity:</strong> {p.quantity}</p>
-                          <p><strong>Color:</strong> {p.color || "—"}</p>
-                          <p><strong>Variant ID:</strong> {p.variantId || "—"}</p>
-                          <p><strong>Unit Price:</strong> {p.price?.toFixed(2)} ₪</p>
-                        </div>
-                    ))}
-                  </div>
+                    {/* Price Summary */}
+                    <div className="mt-6 p-4 border rounded-lg bg-muted/20">
+                      <p className="text-lg font-bold">
+                        Total: {selectedOrder.totalPrice.toFixed(2)} ₪
+                      </p>
+                    </div>
 
-                  {/* Price Summary */}
-                  <div className="mt-6 p-4 border rounded-lg bg-muted/20">
-                    <p className="text-lg font-bold">
-                      Total: {selectedOrder.totalPrice.toFixed(2)} ₪
-                    </p>
                   </div>
 
                   <DrawerFooter>

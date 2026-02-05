@@ -1,4 +1,5 @@
 import User from "../models/users.model.js";
+import Purchase from "../models/purchase.model.js";
 
 export const getMe = async (req, res) => {
     try {
@@ -85,5 +86,74 @@ export const getUserById = async (req, res) => {
         res.status(200).json(user);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching user', error });
+    }
+};
+
+export const getUserPurchases = async (req, res) => {
+    try {
+        console.log("getUserPurchases req.userId:", req.userId);
+
+        if (!req.userId) {
+            return res.status(401).json({ message: "Not authenticated" });
+        }
+
+        // 1) Get user and their orderHistory IDs
+        const user = await User.findById(req.userId).lean();
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        console.log("user.orderHistory:", user.orderHistory);
+
+        const orderIds = Array.isArray(user.orderHistory)
+            ? user.orderHistory
+            : [];
+
+        if (orderIds.length === 0) {
+            // User has no orders yet
+            return res.json([]);
+        }
+
+        // 2) Fetch the purchase documents by IDs
+        const orders = await Purchase.find({ _id: { $in: orderIds } })
+            .sort({ createdAt: -1 })
+            .lean();
+
+        // 3) Return them
+        return res.json(orders);
+    } catch (error) {
+        console.error("Error fetching user purchases:", error);
+        res.status(500).json({
+            message: "Failed to fetch user purchases",
+            error: error.message,
+        });
+    }
+};
+// PATCH /user/purchase/:id/received
+export const markOrderDeliveredByUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const order = await Purchase.findById(id);
+        if (!order) {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        // Optional: verify that this order belongs to this user (by phone or by stored userId)
+        // if (String(order.userId) !== String(req.userId)) { ... }
+
+        // set status to delivered
+        order.orderStatus = "delivered";
+        order.deliveredAt = new Date();
+        await order.save();
+
+        res.json(order);
+    } catch (error) {
+        console.error("Error marking order delivered:", error);
+        res.status(500).json({
+            message: "Failed to mark order as delivered",
+            error: error.message,
+        });
     }
 };
