@@ -45,9 +45,19 @@ const purchaseSchema = new mongoose.Schema({
       productId: String,
       quantity: Number,
       color: String,
+      name: String,
+      price: Number,
       id: String,
     }
   ],
+  orderStatus: {
+    type: String,
+    enum: ['ordered', 'confirmed', 'shipped', 'delivered'],
+    default: 'ordered', // when purchase is first created
+  },
+  confirmedAt: Date,
+  shippedAt: Date,
+  deliveredAt: Date, // will be set when user confirms they received
   totalPrice: {
     type: Number,
     required: true

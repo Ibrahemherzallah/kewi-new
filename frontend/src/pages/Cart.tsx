@@ -109,6 +109,7 @@ const Cart = () => {
   const getItemId = (item: CartItem): string => item.id || item._id || "";
 
   const getItemName = (item: CartItem): string => {
+    console.log("The item name is: " , item.name)
     if (!item.name) return "";
     if (typeof item.name === "string") return item.name;
     return (
@@ -300,7 +301,6 @@ const Cart = () => {
       // ✅ 1) Build products array (shared between purchase + WhatsApp)
       const productsPayload = cart.map((item) => {
         const { mainPrice } = getPricesForItem(item); // unit price
-
         return {
           productId: item._id,                 // REAL Mongo product _id
           id: item.id,                         // composite id (product+variant) for reference if needed
@@ -312,6 +312,7 @@ const Cart = () => {
           unitPrice: mainPrice,  // unit price for WhatsApp
         };
       });
+      console.log("productsPayload(item) " , productsPayload)
 
       // ✅ Total number of items
       const numOfItems = cart.reduce(
