@@ -34,7 +34,7 @@ interface ApiPurchase {
   createdAt: string;
 }
 
-type UIStatus = "placed" | "shipped" | "delivered";
+type UIStatus = 'ordered' | 'confirmed' | 'shipped' | 'delivered';
 
 interface Purchase {
   id: string;
@@ -46,12 +46,10 @@ interface Purchase {
   pointsEarned: number;
 }
 
-const mapOrderStatusToUI = (
-    status?: ApiPurchase["orderStatus"]
-): UIStatus => {
-  if (status === "delivered") return "delivered";
-  if (status === "shipped") return "shipped";
-  return "placed";
+const mapOrderStatusToUI = (status?: ApiPurchase["orderStatus"]): UIStatus => {
+  // fallback for old / missing data
+  if (!status) return "ordered";
+  return status;
 };
 
 const PurchaseHistory = () => {
@@ -62,7 +60,32 @@ const PurchaseHistory = () => {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const action = "delivered";
+  const statusLabel = (status: UIStatus, lang: string) => {
+    if (lang === "ar") {
+      switch (status) {
+        case "ordered":
+          return "تم إنشاء الطلب";
+        case "confirmed":
+          return "تم تأكيد الطلب";
+        case "shipped":
+          return "تم شحن الطلب";
+        case "delivered":
+          return "تم التسليم";
+      }
+    } else {
+      switch (status) {
+        case "ordered":
+          return "Order created";
+        case "confirmed":
+          return "Order confirmed";
+        case "shipped":
+          return "Order shipped";
+        case "delivered":
+          return "Order delivered";
+      }
+    }
+  };
   // 🔹 Fetch user purchases from backend
   useEffect(() => {
     const fetchPurchases = async () => {
@@ -107,11 +130,10 @@ const PurchaseHistory = () => {
           id: order._id,
           date: order.createdAt,
           items: order.products.map((p, idx) => ({
-            name: p.name || `${language === "ar" ? "منتج" : "Product"} #${
-                idx + 1
-            }`,
+            name:
+                p.name ||
+                `${language === "ar" ? "منتج" : "Product"} #${idx + 1}`,
             quantity: p.quantity,
-            // if you didn't store price per item, fallback to 0
             price: p.price ?? 0,
           })),
           total: order.totalPrice,
@@ -138,29 +160,87 @@ const PurchaseHistory = () => {
   }, [language]);
 
   // ✅ User confirms order received
+// inside PurchaseHistory component
+
+// ...
+
   const handleConfirmReceived = async (orderId: string) => {
     const target = purchases.find((p) => p.id === orderId);
     if (!target || target.isConfirmed) return;
 
-    // ... after backend call succeeds
+    try {
+      const token =
+          typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
-    const pointsEarned = addPoints(target.total); // ✅ amount → points
+      if (!token) {
+        toast({
+          title: language === "ar" ? "غير مسجل" : "Not logged in",
+          description:
+              language === "ar"
+                  ? "الرجاء تسجيل الدخول لتأكيد الطلب"
+                  : "Please log in to confirm the order.",
+          variant: "destructive",
+        });
+        return;
+      }
+      console.log("token is: ", token)
+      const res = await fetch(`${API_BASE}/user/purchase/${orderId}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action: "delivered" }),
+      });
 
-    setPurchases((prev) =>
-        prev.map((p) =>
-            p.id === orderId
-                ? { ...p, isConfirmed: true, status: "delivered", pointsEarned }
-                : p
-        )
-    );
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.message || "Failed to confirm order");
+      }
 
-    toast({
-      title: language === "ar" ? "تم تأكيد الاستلام!" : "Order confirmed!",
-      description:
-          language === "ar"
-              ? `حصلت على ${pointsEarned} نقطة ولاء`
-              : `You earned ${pointsEarned} loyalty points!`,
-    });
+      const result = await res.json();
+      const pointsEarned = result.earnedPoints ?? 0;
+
+      // update loyalty context
+      addPoints(pointsEarned);
+
+      // update local state
+      setPurchases((prev) =>
+          prev.map((p) =>
+              p.id === orderId
+                  ? {
+                    ...p,
+                    isConfirmed: true,
+                    status: "delivered",
+                    pointsEarned,
+                  }
+                  : p
+          )
+      );
+
+      toast({
+        title: language === "ar" ? "تم تأكيد الاستلام!" : "Order confirmed!",
+        description:
+            pointsEarned > 0
+                ? language === "ar"
+                    ? `حصلت على ${pointsEarned} نقطة ولاء`
+                    : `You earned ${pointsEarned} loyalty points!`
+                : language === "ar"
+                    ? "تم تأكيد الطلب"
+                    : "Order has been confirmed",
+      });
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        title: language === "ar" ? "خطأ" : "Error",
+        description:
+            err?.message ||
+            (language === "ar"
+                ? "فشل في تأكيد استلام الطلب"
+                : "Failed to confirm order delivery."),
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -224,28 +304,18 @@ const PurchaseHistory = () => {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            {purchase.isConfirmed &&
-                                purchase.pointsEarned > 0 && (
-                                    <Badge
-                                        variant="secondary"
-                                        className="flex items-center gap-1"
-                                    >
-                                      <Star className="h-3 w-3" />
-                                      +{purchase.pointsEarned} pts
-                                    </Badge>
-                                )}
+                            {purchase.isConfirmed && purchase.pointsEarned > 0 && (
+                                <Badge variant="secondary" className="flex items-center gap-1">
+                                  <Star className="h-3 w-3" />
+                                  +{purchase.pointsEarned} pts
+                                </Badge>
+                            )}
                             <Badge
                                 variant={
-                                  purchase.isConfirmed ? "default" : "secondary"
+                                  purchase.status === "delivered" ? "default" : "secondary"
                                 }
                             >
-                              {purchase.isConfirmed
-                                  ? language === "ar"
-                                      ? "مكتمل"
-                                      : "Completed"
-                                  : language === "ar"
-                                      ? "قيد التتبع"
-                                      : "In Progress"}
+                              {statusLabel(purchase.status, language)}
                             </Badge>
                           </div>
                         </div>
@@ -263,21 +333,20 @@ const PurchaseHistory = () => {
                         </div>
 
                         {/* Potential Points Display */}
-                        {!purchase.isConfirmed &&
-                            purchase.status === "delivered" && (
-                                <div className="mb-4 flex items-center gap-2 text-sm bg-primary/10 rounded-lg p-3">
-                                  <Gift className="h-4 w-4 text-primary" />
-                                  <span>
-                          {language === "ar"
-                              ? `ستحصل على ${calculatePotentialPoints(
-                                  purchase.total
-                              )} نقطة عند تأكيد الاستلام`
-                              : `You'll earn ${calculatePotentialPoints(
-                                  purchase.total
-                              )} points when you confirm delivery`}
-                        </span>
-                                </div>
-                            )}
+                        {!purchase.isConfirmed && purchase.status === "shipped" && (
+                            <div className="mb-4 flex items-center gap-2 text-sm bg-primary/10 rounded-lg p-3">
+                              <Gift className="h-4 w-4 text-primary" />
+                              <span>
+                                {language === "ar"
+                                    ? `ستحصل على ${calculatePotentialPoints(
+                                        purchase.total
+                                    )} نقطة عند تأكيد الاستلام`
+                                    : `You'll earn ${calculatePotentialPoints(
+                                        purchase.total
+                                    )} points when you confirm delivery`}
+                              </span>
+                            </div>
+                        )}
 
                         {/* Items table (fallback name/price if not stored) */}
                         <Table>
@@ -300,16 +369,16 @@ const PurchaseHistory = () => {
                           <TableBody>
                             {purchase.items.map((item, idx) => (
                                 <TableRow key={idx}>
-                                  <TableCell className="font-medium">
+                                  <TableCell className="font-medium" dir={language === 'ar' ? 'ltr' : ''}>
                                     {item.name}
                                   </TableCell>
-                                  <TableCell>{item.quantity}</TableCell>
-                                  <TableCell>
+                                  <TableCell dir={language === 'ar' ? 'ltr' : ''}>{item.quantity}</TableCell>
+                                  <TableCell dir={language === 'ar' ? 'ltr' : ''}>
                                     {item.price > 0
                                         ? `${item.price.toFixed(2)} ₪`
                                         : "—"}
                                   </TableCell>
-                                  <TableCell>
+                                  <TableCell dir={language === 'ar' ? 'ltr' : ''}>
                                     {item.price > 0
                                         ? `${(item.price * item.quantity).toFixed(
                                             2
@@ -330,7 +399,7 @@ const PurchaseHistory = () => {
                           </div>
                           <div className="text-right">
                             <p className="text-sm text-muted-foreground">
-                              {language === "ar" ? "الإجمالي" : "Total"}
+                              {language === "ar" ? "الإجمالي بدون توصيل" : "Total Without Delivery"}
                             </p>
                             <p className="text-2xl font-bold text-primary">
                               {purchase.total.toFixed(2)} ₪

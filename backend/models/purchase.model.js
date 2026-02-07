@@ -50,6 +50,10 @@ const purchaseSchema = new mongoose.Schema({
       id: String,
     }
   ],
+  discount: {
+    type: Boolean,
+    required: true,
+  },
   orderStatus: {
     type: String,
     enum: ['ordered', 'confirmed', 'shipped', 'delivered'],

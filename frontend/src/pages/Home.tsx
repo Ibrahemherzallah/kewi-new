@@ -37,6 +37,7 @@ type BackendProduct = {
   stockNumber?: number;
   customerPrice?: number;
   wholesalerPrice?: number;
+  isMultiColor? : boolean;
   salePrice?: number;
   isOnSale?: boolean;
   isSoldOut?: boolean;
@@ -122,13 +123,43 @@ const Home = () => {
   const handleAddToCart = (product: BackendProduct) => {
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
 
-    // note: use _id to match DB everywhere
-    const existingItem = cart.find((item: any) => item._id === product._id);
+    // 🟦 1) Auto-select variant if multi color
+    const isMulti = product.isMultiColor && Array.isArray(product.variants);
+    const selectedVariant = isMulti && product.variants.length > 0
+        ? product.variants[0]          // 👈 first variant by default
+        : null;
+
+    // 🟦 2) Choose correct images
+    const variantImage = selectedVariant?.image ? [selectedVariant.image] : [];
+
+    const fallbackImages =
+        // some products use `images`, some `image`
+        (Array.isArray((product as any).images) && (product as any).images.length > 0)
+            ? (product as any).images
+            : (Array.isArray(product.image) ? product.image : (product.image ? [product.image] : []));
+
+    const images = variantImage.length > 0 ? variantImage : fallbackImages;
+
+    // 🟦 3) Composite id (per color) – same pattern as ProductDetails
+    const compositeId = selectedVariant
+        ? `${product._id}-${selectedVariant._id}`
+        : product._id;
+
+    // 🟦 4) Find existing item by composite id
+    const existingItem = cart.find((item: any) => item.id === compositeId);
 
     if (existingItem) {
-      existingItem.quantity += 1;
+      existingItem.quantity = (existingItem.quantity || 1) + 1;
     } else {
-      cart.push({ ...product, quantity: 1 });
+      cart.push({
+        ...product,
+        id: compositeId,           // unique per product+variant
+        _id: product._id,          // REAL product id for backend
+        quantity: 1,
+        images,
+        color: selectedVariant?.color || null,
+        variantId: selectedVariant?._id || null,
+      });
     }
 
     localStorage.setItem("cart", JSON.stringify(cart));
@@ -137,10 +168,11 @@ const Home = () => {
 
     toast({
       title: t("toast.addedToCart"),
-      description: `${productName} ${t("toast.addedDesc")}`,
+      description: `${productName}${
+          selectedVariant ? ` (${selectedVariant.color})` : ""
+      } ${t("toast.addedDesc")}`,
     });
   };
-  console.log("sssssssssssssssssss featuredProducts is : , " , featuredProducts)
   return (
       <div className="min-h-screen bg-background">
         <Navbar cartCount={0} />

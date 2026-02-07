@@ -20,18 +20,7 @@ export const getPurchase = async (req, res) => {
 };
 
 export const addPurchase = async (req, res) => {
-    const {
-        cName,
-        cNumber,
-        cAddress,
-        cCity,
-        delivery,
-        notes,
-        id,
-        products, // includes { productId, quantity, color, price, variantId }
-        totalPrice,
-        numOfItems,
-    } = req.body;
+    const {cName, cNumber, cAddress, cCity, delivery, notes, id, products, totalPrice,discount,numOfItems,} = req.body;
 
     console.log("products IS : ", products);
 
@@ -44,9 +33,10 @@ export const addPurchase = async (req, res) => {
             deliveryType: delivery,
             notes,
             id,
-            price: totalPrice, // frontend calculated
+            price: totalPrice,
             totalPrice,
             numOfItems,
+            discount,
             products,
         });
 
@@ -57,7 +47,6 @@ export const addPurchase = async (req, res) => {
             let user = null;
 
             // Prefer req.userId from JWT (route protected by requireAuth)
-            console.log("req.userId is: " ,req.userId)
             if (req.userId) {
                 user = await User.findByIdAndUpdate(
                     req.userId,
@@ -100,22 +89,30 @@ export const addPurchase = async (req, res) => {
     }
 };
 
+const calculatePointsFromPurchase = (amount) => {
+    return Math.floor(amount / 50) * 2;
+};
+
 export const updateOrderStatus = async (req, res) => {
-    console.log("testt")
     try {
         const { id } = req.params;
-        const { action } = req.body; // 'confirm' | 'ship' | 'deliver'
+        const { action } = req.body; // 'confirm' | 'ship' | 'delivered'
+
 
         const order = await Purchase.findById(id);
         if (!order) {
             return res.status(404).json({ message: "Order not found" });
         }
 
+        let earnedPoints = 0;
+        let updated = false;
+
         if (action === "confirm") {
             // admin confirmed with customer by phone
             if (order.orderStatus === "ordered") {
                 order.orderStatus = "confirmed";
                 order.confirmedAt = new Date();
+                updated = true;
             }
         } else if (action === "ship") {
             // admin handed to delivery company
@@ -123,25 +120,143 @@ export const updateOrderStatus = async (req, res) => {
                 order.orderStatus = "shipped";
                 if (!order.confirmedAt) order.confirmedAt = new Date();
                 order.shippedAt = new Date();
+                updated = true;
             }
-        } else if (action === "deliver") {
-            // later: user marks as received
+        } else if (action === "delivered") {
+            // user marks as received
             if (order.orderStatus === "shipped" || order.orderStatus === "confirmed") {
+                // only give points first time it becomes delivered
+                const wasDeliveredBefore = order.orderStatus === "delivered";
+
                 order.orderStatus = "delivered";
                 order.deliveredAt = new Date();
+                updated = true;
+
+                if (!wasDeliveredBefore) {
+                    earnedPoints = calculatePointsFromPurchase(order.totalPrice);
+                    console.log("earnedPoints is : ", earnedPoints )
+                }
             }
         } else {
             return res.status(400).json({ message: "Invalid action" });
         }
 
+        if (!updated) {
+            return res
+                .status(400)
+                .json({ message: "Order status not changed (invalid state)" });
+        }
+
         await order.save();
 
-        res.json(order);
+        let totalPoints;
+
+        // If we earned points, update the user
+        if (earnedPoints > 0) {
+            const user = await User.findById(req.userId); // from auth middleware
+            if (user) {
+                user.loyaltyPoints = (user.loyaltyPoints || 0) + earnedPoints;
+                await user.save();
+                totalPoints = user.loyaltyPoints;
+            }
+        }
+
+        return res.json({
+            order,
+            earnedPoints,
+            totalPoints, // may be undefined if no points earned
+        });
     } catch (error) {
         console.error("Error updating order status:", error);
         res.status(500).json({
             message: "Failed to update order status",
             error: error.message,
+        });
+    }
+};
+
+// controllers/loyalty.controller.js
+
+
+// already have this for percentage discount:
+export const redeemDiscountWithPoints = async (req, res) => {
+    try {
+        const { pointsCost } = req.body;
+
+        if (
+            pointsCost == null ||
+            typeof pointsCost !== "number" ||
+            !Number.isInteger(pointsCost) ||
+            pointsCost <= 0
+        ) {
+            return res
+                .status(400)
+                .json({ message: "Invalid points cost for discount redemption" });
+        }
+
+        const user = await User.findById(req.userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        const currentPoints = user.loyaltyPoints || 0;
+
+        if (currentPoints < pointsCost) {
+            return res.status(400).json({
+                message: "Not enough loyalty points",
+                loyaltyPoints: currentPoints,
+            });
+        }
+
+        user.loyaltyPoints = currentPoints - pointsCost;
+        await user.save();
+
+        return res.json({
+            message: "Discount redeemed successfully",
+            loyaltyPoints: user.loyaltyPoints,
+            pointsSpent: pointsCost,
+        });
+    } catch (err) {
+        console.error("Error redeeming discount with points:", err);
+        return res.status(500).json({
+            message: "Failed to redeem discount",
+            error: err.message,
+        });
+    }
+};
+
+// 👇 NEW: free product redemption
+export const redeemFreeProductWithPoints = async (req, res) => {
+    try {
+        const FREE_PRODUCT_COST = 100;
+
+        const user = await User.findById(req.userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        const currentPoints = user.loyaltyPoints || 0;
+
+        if (currentPoints < FREE_PRODUCT_COST) {
+            return res.status(400).json({
+                message: "Not enough loyalty points for free product",
+                loyaltyPoints: currentPoints,
+            });
+        }
+
+        user.loyaltyPoints = currentPoints - FREE_PRODUCT_COST;
+        await user.save();
+
+        return res.json({
+            message: "Free product redeemed successfully",
+            loyaltyPoints: user.loyaltyPoints,
+            pointsSpent: FREE_PRODUCT_COST,
+        });
+    } catch (err) {
+        console.error("Error redeeming free product:", err);
+        return res.status(500).json({
+            message: "Failed to redeem free product",
+            error: err.message,
         });
     }
 };
@@ -301,5 +416,38 @@ export const deleteOrder = async (req, res) => {
     } catch (error) {
         console.error("Error deleting order:", error);
         res.status(500).json({ success: false, message: "Server error" });
+    }
+};
+
+
+// e.g. userPaymentController.js
+export const createPaymentSession = async (req, res) => {
+    try {
+        const { orderId, amount } = req.body;
+        const userId = req.userId; // from your auth middleware
+
+        // TODO: validate order, amount, ownership, etc.
+
+        // TODO: call Bank of Palestine API here:
+        // const response = await axios.post("https://bank-palestine-api/.../createPayment", {
+        //   amount,
+        //   currency: "ILS",
+        //   orderId,
+        //   returnUrl: "https://your-domain.com/payment/success",
+        //   notifyUrl: "https://your-backend.com/payment/webhook"
+        //   ...
+        // });
+
+        // Example:
+        // const paymentUrl = response.data.paymentUrl;
+
+        const paymentUrl = "https://bank-of-palestine-demo-url.com/payment"; // placeholder
+
+        res.json({ paymentUrl });
+    } catch (err) {
+        console.error("Error creating payment session:", err);
+        res.status(500).json({
+            message: "Failed to create payment session",
+        });
     }
 };

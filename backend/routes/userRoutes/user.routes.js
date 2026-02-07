@@ -17,5 +17,6 @@ router.get("/purchase/my", requireAuth, getUserPurchases);
 router.patch("/purchase/:id/received", requireAuth, markOrderDeliveredByUser);
 router.get("/me", requireAuth, getMe);
 router.put("/me", requireAuth, updateMe);
+router.put("/loyalty/me", updateMe);
 
 export default router;

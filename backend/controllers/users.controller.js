@@ -13,6 +13,7 @@ export const getMe = async (req, res) => {
             address: user.address,
             dob: user.dob,
             role: user.role,
+            loyaltyPoints: user.loyaltyPoints ?? 0,
         });
     } catch (err) {
         res.status(500).json({ message: "Server error", error: err.message });
@@ -91,8 +92,6 @@ export const getUserById = async (req, res) => {
 
 export const getUserPurchases = async (req, res) => {
     try {
-        console.log("getUserPurchases req.userId:", req.userId);
-
         if (!req.userId) {
             return res.status(401).json({ message: "Not authenticated" });
         }
@@ -103,8 +102,6 @@ export const getUserPurchases = async (req, res) => {
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
-
-        console.log("user.orderHistory:", user.orderHistory);
 
         const orderIds = Array.isArray(user.orderHistory)
             ? user.orderHistory
