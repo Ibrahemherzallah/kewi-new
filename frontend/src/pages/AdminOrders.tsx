@@ -7,13 +7,22 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, ClipboardList, Search } from "lucide-react";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow,} from "@/components/ui/table";
 import {Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerClose,} from "@/components/ui/drawer";
+import {toast} from "sonner";
+import {useLanguage} from "@/contexts/LanguageContext.tsx";
 interface PurchaseProduct {
   productId: string;
   quantity: number;
   color?: string;
   variantId?: string;
-  id?: string;        // composite cart id, optional
-  price?: number;     // unit price at time of purchase
+  id?: string;
+  name?: string;
+  price?: number;
+}
+
+interface StatusUpdateResponse {
+  order: Purchase;
+  earnedPoints?: number;
+  totalPoints?: number;
 }
 
 interface Purchase {
@@ -30,8 +39,7 @@ interface Purchase {
   products: PurchaseProduct[];
   createdAt: string;
   updatedAt: string;
-
-  // 🆕 status fields
+  discount: boolean;
   orderStatus?: "ordered" | "confirmed" | "shipped" | "delivered";
   confirmedAt?: string;
   shippedAt?: string;
@@ -50,6 +58,7 @@ const AdminOrders = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Purchase | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { language } = useLanguage();
 
   const openOrderDrawer = (order: Purchase) => {
     setSelectedOrder(order);
@@ -89,9 +98,27 @@ const AdminOrders = () => {
 
   const handleUpdateStatus = async (orderId: string, action: "confirm" | "ship") => {
     try {
+      const token =
+          typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+      if (!token) {
+        toast({
+          title: language === "ar" ? "غير مسجل" : "Not logged in",
+          description:
+              language === "ar"
+                  ? "الرجاء تسجيل الدخول لتأكيد الطلب"
+                  : "Please log in to confirm the order.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const res = await fetch(`${API_BASE}/user/purchase/${orderId}/status`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ action }),
       });
 
@@ -100,10 +127,12 @@ const AdminOrders = () => {
         throw new Error(errData?.message || "Failed to update status");
       }
 
-      const updated: Purchase = await res.json();
+      // 👇 the backend returns { order, earnedPoints, totalPoints }
+      const result: StatusUpdateResponse = await res.json();
+      const updatedOrder: Purchase = result.order;
 
       setOrders((prev) =>
-          prev.map((o) => (o._id === orderId ? updated : o))
+          prev.map((o) => (o._id === updatedOrder._id ? updatedOrder : o))
       );
     } catch (err: any) {
       console.error("Status update error:", err);
@@ -155,14 +184,14 @@ const AdminOrders = () => {
   const filteredOrders = orders.filter((order) => {
     const q = search.toLowerCase();
     return (
-        order._id.toLowerCase().includes(q) ||
+        order?._id?.toLowerCase().includes(q) ||
         (order.fullName || "").toLowerCase().includes(q) ||
         (order.phoneNumber || "").toLowerCase().includes(q) ||
         (order.city || "").toLowerCase().includes(q)
     );
   });
 
-  console.log("The selectedOrder is : ", selectedOrder)
+
   return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-12">
@@ -180,11 +209,6 @@ const AdminOrders = () => {
                 </p>
               </div>
             </div>
-            {/* You can turn this into "Export" or something later */}
-            {/*<Button disabled>*/}
-            {/*  /!* <Plus className="mr-2 h-4 w-4" /> *!/*/}
-            {/*  New Order*/}
-            {/*</Button>*/}
           </div>
 
           <Card className="p-6">
@@ -228,6 +252,7 @@ const AdminOrders = () => {
                       <TableHead>City</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Total</TableHead>
+                      <TableHead>Discount</TableHead>
                       <TableHead>Delivery</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -272,6 +297,7 @@ const AdminOrders = () => {
                             <TableCell className="font-semibold">
                               {order?.totalPrice?.toFixed(2)} ₪
                             </TableCell>
+                            <TableCell>{order?.discount ? "Yes" : 'No'}</TableCell>
                             <TableCell>{order.deliveryType}</TableCell>
 
                             <TableCell>
@@ -285,19 +311,11 @@ const AdminOrders = () => {
                             </TableCell>
 
                             <TableCell className="flex gap-2">
-                              <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => openOrderDrawer(order)}
-                              >
+                              <Button variant="outline" size="sm" onClick={() => openOrderDrawer(order)}>
                                 View
                               </Button>
 
-                              <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => handleDeleteOrder(order._id)}
-                              >
+                              <Button variant="destructive" size="sm" onClick={() => handleDeleteOrder(order._id)}>
                                 Delete
                               </Button>
                             </TableCell>

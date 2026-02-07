@@ -8,7 +8,7 @@ import { useLoyalty } from "@/contexts/LoyaltyContext";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import {Dialog, DialogContent, DialogHeader, DialogTitle,} from "@/components/ui/dialog";
-
+import {AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -39,6 +39,7 @@ interface CheckoutFormData {
   address: string; // here we'll store region label if needed
   city: string;
   notes: string;
+  paymentMethod: string;
 }
 
 interface City {
@@ -54,13 +55,13 @@ interface DeliveryType {
 const Cart = () => {
   const { t, language } = useLanguage();
   const { toast } = useToast();
-  const { points, getDiscount, redeemFreeProduct, canRedeemFreeProduct } =
-      useLoyalty();
-
+  const { points, getDiscount, redeemFreeProduct, canRedeemFreeProduct, spendPoints } = useLoyalty();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [freeProductId, setFreeProductId] = useState<string | null>(null);
   const [applyDiscount, setApplyDiscount] = useState(false);
+  const [appliedDiscountPercentage, setAppliedDiscountPercentage] = useState<number | null>(null); // 👈 NEW
+  const [loading,setLoading] = useState(false);
   // const fastName = deliveryTypes[0].name[language]; // "مستعجل" or "Express"
   const [formData, setFormData] = useState<CheckoutFormData>({
     name: "",
@@ -68,6 +69,7 @@ const Cart = () => {
     address: "",
     city: "",
     notes: "",
+    paymentMethod: "cash",
   });
 
   // Cities / regions
@@ -154,6 +156,7 @@ const Cart = () => {
 
     return { mainPrice, oldPrice };
   };
+  const [confirmDiscountOpen, setConfirmDiscountOpen] = useState(false);
 
   // ---------- LOAD CART ----------
 
@@ -259,15 +262,19 @@ const Cart = () => {
   }, 0);
 
   const calculateDiscount = () => {
+    // Free product case (uses points >= 100)
     if (canRedeemFreeProduct && freeProductId) {
       const freeItem = cart.find((item) => getItemId(item) === freeProductId);
       if (!freeItem) return 0;
       const { mainPrice } = getPricesForItem(freeItem);
       return mainPrice;
     }
-    if (applyDiscount && discount.percentage > 0) {
-      return (subtotal * discount.percentage) / 100;
+
+    // Percentage discount case: use the FROZEN applied value, not current points
+    if (applyDiscount && appliedDiscountPercentage && appliedDiscountPercentage > 0) {
+      return (subtotal * appliedDiscountPercentage) / 100;
     }
+
     return 0;
   };
 
@@ -289,30 +296,83 @@ const Cart = () => {
 
   const handleCheckout = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
+    setLoading(true)
     if (cart.length === 0) return;
 
     try {
-      // ✅ loyalty
+      const token =
+          typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+      // ✅ 0) Loyalty: if user chose a free product, redeem 100 pts in backend
       if (canRedeemFreeProduct && freeProductId) {
-        redeemFreeProduct();
+        if (!token) {
+          toast({
+            title: language === "ar" ? "غير مسجل" : "Not logged in",
+            description:
+                language === "ar"
+                    ? "الرجاء تسجيل الدخول لاستخدام نقاط الولاء والحصول على المنتج المجاني."
+                    : "Please log in to use loyalty points and get a free product.",
+            variant: "destructive",
+          });
+          return; // ⛔ stop checkout
+        }
+
+        try {
+          const res = await fetch(
+              "http://localhost:5001/user/loyalty/redeem-free-product",
+              {
+                method: "PATCH",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+          );
+
+          if (!res.ok) {
+            const errData = await res.json().catch(() => null);
+            throw new Error(
+                errData?.message ||
+                (language === "ar"
+                    ? "فشل في استخدام النقاط للحصول على المنتج المجاني"
+                    : "Failed to use loyalty points for the free product")
+            );
+          }
+
+          const result = await res.json();
+          console.log("redeem-free-product result:", result);
+
+          // 🔹 Sync frontend points (context subtracts 100)
+          redeemFreeProduct();
+        } catch (err: any) {
+          console.error("Error redeeming free product:", err);
+          toast({
+            title: language === "ar" ? "خطأ" : "Error",
+            description:
+                err?.message ||
+                (language === "ar"
+                    ? "فشل في استخدام النقاط للحصول على المنتج المجاني"
+                    : "Failed to redeem free product with points."),
+            variant: "destructive",
+          });
+          return; // ⛔ don't continue with checkout if redemption failed
+        }
       }
 
       // ✅ 1) Build products array (shared between purchase + WhatsApp)
       const productsPayload = cart.map((item) => {
         const { mainPrice } = getPricesForItem(item); // unit price
         return {
-          productId: item._id,                 // REAL Mongo product _id
-          id: item.id,                         // composite id (product+variant) for reference if needed
+          productId: item._id,           // REAL Mongo product _id
+          id: item.id,                   // composite id (product+variant) if used
           name: getItemName(item),
           quantity: item.quantity || 1,
           color: (item as any).color || "",
           variantId: (item as any).variantId || null,
-          price: mainPrice,      // unit price for purchase
-          unitPrice: mainPrice,  // unit price for WhatsApp
+          price: mainPrice,              // unit price for purchase
+          unitPrice: mainPrice,          // unit price for WhatsApp
         };
       });
-      console.log("productsPayload(item) " , productsPayload)
 
       // ✅ Total number of items
       const numOfItems = cart.reduce(
@@ -321,24 +381,24 @@ const Cart = () => {
       );
 
       // ✅ Totals (بدون / مع توصيل)
-      const totalWithoutDelivery = Number(total.toFixed(2));      // المنتجات فقط
-      const totalWithDelivery = Number(grandTotal.toFixed(2));    // مع التوصيل
+      const totalWithoutDelivery = Number(total.toFixed(2));
+      const totalWithDelivery = Number(grandTotal.toFixed(2));
 
       // ✅ 2) Send purchase to backend (addPurchase)
       const purchaseBody = {
         cName: formData.name,
         cNumber: formData.phone,
-        cAddress: formData.city,           // "المدينة"
-        cCity: formData.address || "",     // "المنطقة" (region dropdown)
+        cAddress: formData.city,
+        cCity: formData.address || "",
         delivery: normalizeDelivery(selectedType),
         notes: formData.notes,
         products: productsPayload,
-        totalPrice: totalWithoutDelivery,  // السعر الإجمالي بدون توصيل
+        totalPrice: totalWithoutDelivery,
+        // just a flag that some kind of discount was used (free product or %)
+        discount: !!(freeProductId || applyDiscount),
         numOfItems,
+        paymentMethod: formData.paymentMethod
       };
-
-      const token =
-          typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
       const purchaseRes = await fetch("http://localhost:5001/user/purchase", {
         method: "POST",
@@ -387,7 +447,7 @@ const Cart = () => {
         cAddress: formData.city,           // في الرسالة كـ "المدينة"
         cCity: formData.address || "",     // في الرسالة كـ "المنطقة"
         notes: formData.notes,
-        price: totalWithDelivery,          // إذا حاب تشوف المبلغ مع التوصيل
+        price: totalWithDelivery,          // المبلغ مع التوصيل
         totalPrice: totalWithoutDelivery,  // المستعمل حالياً في الرسالة
         numOfItems,
         delivery: normalizeDelivery(selectedType),
@@ -434,6 +494,8 @@ const Cart = () => {
                 : "An error occurred while sending your order"),
         variant: "destructive",
       });
+    } finally {
+      setLoading(false)
     }
   };
 
@@ -442,9 +504,105 @@ const Cart = () => {
     setApplyDiscount(false); // Can't use both
   };
 
-  const handleApplyPercentDiscount = () => {
-    setApplyDiscount(true);
-    setFreeProductId(null); // Can't use both
+  const handleApplyPercentDiscountClick = () => {
+    setConfirmDiscountOpen(true);
+  };
+
+  const handleConfirmDiscountApply = async () => {
+    const discountInfo = discount; // from getDiscount()
+    const percentage = discountInfo.percentage;
+
+    // Cost rule: 1 point per 1% discount
+    const pointsCost = percentage;
+
+    if (!percentage || percentage <= 0) {
+      setConfirmDiscountOpen(false);
+      return;
+    }
+
+    // Check locally first
+    if (points < pointsCost) {
+      toast({
+        title: language === "ar" ? "نقاط غير كافية" : "Not enough points",
+        description:
+            language === "ar"
+                ? `تحتاج على الأقل ${pointsCost} نقطة لتطبيق هذا الخصم`
+                : `You need at least ${pointsCost} points to apply this discount.`,
+        variant: "destructive",
+      });
+      setConfirmDiscountOpen(false);
+      return;
+    }
+
+    try {
+      const token =
+          typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+      if (!token) {
+        toast({
+          title: language === "ar" ? "غير مسجل" : "Not logged in",
+          description:
+              language === "ar"
+                  ? "الرجاء تسجيل الدخول لاستخدام نقاط الولاء"
+                  : "Please log in to use your loyalty points.",
+          variant: "destructive",
+        });
+        setConfirmDiscountOpen(false);
+        return;
+      }
+
+      const res = await fetch(
+          "http://localhost:5001/user/loyalty/redeem-discount",
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ pointsCost }),
+          }
+      );
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(
+            errData?.message ||
+            (language === "ar"
+                ? "فشل في استخدام النقاط"
+                : "Failed to use loyalty points")
+        );
+      }
+
+      const result = await res.json();
+      console.log("redeem-discount result:", result);
+
+      // 🔹 Update local state (loyalty + applied discount)
+      spendPoints(pointsCost);
+
+      setAppliedDiscountPercentage(percentage); // 👈 freeze the value used for this order
+      setApplyDiscount(true);
+      setFreeProductId(null); // can't combine free product + % discount
+      setConfirmDiscountOpen(false);
+
+      toast({
+        title: language === "ar" ? "تم تطبيق الخصم" : "Discount applied",
+        description:
+            language === "ar"
+                ? `تم خصم ${pointsCost} نقطة من رصيدك`
+                : `${pointsCost} points were deducted from your balance.`,
+      });
+    } catch (err: any) {
+      console.error("Error redeeming discount:", err);
+      toast({
+        title: language === "ar" ? "خطأ" : "Error",
+        description:
+            err?.message ||
+            (language === "ar"
+                ? "فشل في تطبيق الخصم باستخدام النقاط"
+                : "Failed to apply discount using points."),
+        variant: "destructive",
+      });
+    }
   };
 
   // ---------- RENDER ----------
@@ -499,10 +657,7 @@ const Cart = () => {
                     const { mainPrice, oldPrice } = getPricesForItem(item);
 
                     return (
-                        <div
-                            key={id}
-                            className="bg-card border border-border rounded-2xl p-6 flex gap-4 relative"
-                        >
+                        <div key={id} className="bg-card border border-border rounded-2xl p-6 flex gap-4 relative">
                           {freeProductId === id && (
                               <Badge className="absolute top-2 left-2 bg-primary">
                                 <Gift className="h-3 w-3 mr-1" />
@@ -510,11 +665,7 @@ const Cart = () => {
                               </Badge>
                           )}
 
-                          <img
-                              src={images[0]}
-                              alt={getItemName(item)}
-                              className="w-24 h-24 object-cover rounded-lg"
-                          />
+                          <img src={images[0]} alt={getItemName(item)} className="w-24 h-24 object-cover rounded-lg"/>
 
                           <div className="flex-1">
                             <h3 className="font-semibold text-lg mb-2">
@@ -522,13 +673,13 @@ const Cart = () => {
                             </h3>
 
                             <div className="space-x-2 space-y-1">
-                        <span className="text-primary font-bold text-lg">
-                          {mainPrice.toFixed(2)} ₪
-                        </span>
+                                  <span className="text-primary font-bold text-lg">
+                                    {mainPrice.toFixed(2)} ₪
+                                  </span>
                               {oldPrice != null && oldPrice !== mainPrice && (
                                   <span className="text-sm text-muted-foreground line-through">
-                            {oldPrice.toFixed(2)} ₪
-                          </span>
+                                    {oldPrice.toFixed(2)} ₪
+                                  </span>
                               )}
                             </div>
 
@@ -541,8 +692,8 @@ const Cart = () => {
                                 <Minus className="h-4 w-4" />
                               </Button>
                               <span className="w-12 text-center font-medium">
-                          {item.quantity}
-                        </span>
+                                {item.quantity}
+                              </span>
                               <Button
                                   variant="outline"
                                   size="icon"
@@ -631,13 +782,17 @@ const Cart = () => {
                                   variant={applyDiscount ? "default" : "outline"}
                                   size="sm"
                                   className="w-full"
-                                  onClick={handleApplyPercentDiscount}
+                                  onClick={handleApplyPercentDiscountClick}
                               >
                                 <Tag className="h-4 w-4 mr-2" />
                                 {applyDiscount
                                     ? language === "ar"
-                                        ? `تم تطبيق خصم ${discount.percentage}%`
-                                        : `${discount.percentage}% discount applied`
+                                        ? `تم تطبيق خصم ${
+                                            appliedDiscountPercentage ?? discount.percentage
+                                        }%`
+                                        : `${
+                                            appliedDiscountPercentage ?? discount.percentage
+                                        }% discount applied`
                                     : language === "ar"
                                         ? `تطبيق خصم ${discount.percentage}%`
                                         : `Apply ${discount.percentage}% discount`}
@@ -674,8 +829,8 @@ const Cart = () => {
                                 ? "منتج مجاني"
                                 : "Free product"
                             : language === "ar"
-                                ? `خصم ${discount.percentage}%`
-                                : `${discount.percentage}% discount`}
+                                ? `خصم ${appliedDiscountPercentage}%`
+                                : `${appliedDiscountPercentage}% discount`}
                       </span>
                             <span>- {discountAmount.toFixed(2)} ₪</span>
                           </div>
@@ -823,6 +978,53 @@ const Cart = () => {
                     }
                 />
               </div>
+              {/* Payment method */}
+              <div>
+                <Label>
+                  {language === "ar" ? "طريقة الدفع" : "Payment Method"}
+                </Label>
+
+                <div className="mt-2 flex flex-col gap-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="cash"
+                        checked={formData.paymentMethod === "cash"}
+                        onChange={(e) =>
+                            setFormData((prev) => ({ ...prev, paymentMethod: e.target.value as "cash" | "visa" }))
+                        }
+                    />
+                    <span className="text-sm">
+                      {language === "ar" ? "الدفع نقداً عند الاستلام" : "Cash on delivery"}
+                    </span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="visa"
+                        checked={formData.paymentMethod === "visa"}
+                        onChange={(e) =>
+                            setFormData((prev) => ({ ...prev, paymentMethod: e.target.value as "cash" | "visa" }))
+                        }
+                    />
+                    <span className="text-sm">
+                      {language === "ar" ? "الدفع بواسطة فيزا" : "Pay with Visa"}
+                    </span>
+                  </label>
+                </div>
+
+                {/* Optional info text */}
+                {formData.paymentMethod === "visa" && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {language === "ar"
+                          ? "سيتم تحويلك إلى بوابة دفع آمنة لبنك فلسطين لإتمام العملية."
+                          : "You will be redirected to Bank of Palestine's secure payment page to complete your payment."}
+                    </p>
+                )}
+              </div>
 
               {/* Summary inside dialog */}
               <div className="bg-primary/10 rounded-lg p-3 space-y-1">
@@ -834,8 +1036,8 @@ const Cart = () => {
                               ? "يتضمن منتج مجاني!"
                               : "Includes a free product!"
                           : language === "ar"
-                              ? `خصم ${discount.percentage}% مطبق`
-                              : `${discount.percentage}% discount applied`
+                              ? `خصم ${appliedDiscountPercentage}% مطبق`
+                              : `${appliedDiscountPercentage}% discount applied`
                       : language === "ar"
                           ? "الإجمالي يشمل التوصيل"
                           : "Total includes delivery"}
@@ -860,13 +1062,35 @@ const Cart = () => {
                 >
                   {t("checkout.cancel")}
                 </Button>
-                <Button type="submit" className="flex-1">
+                <Button type="submit" className="flex-1" disabled={loading}>
                   {t("checkout.submit")}
                 </Button>
               </div>
             </form>
           </DialogContent>
         </Dialog>
+        <AlertDialog open={confirmDiscountOpen} onOpenChange={setConfirmDiscountOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {language === "ar" ? "تأكيد استخدام النقاط" : "Confirm points usage"}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {language === "ar"
+                    ? `هل أنت متأكد أنك تريد استخدام نقاطك لتطبيق خصم ${discount.percentage}%؟ سيتم خصم نفس عدد النقاط (${discount.percentage} نقطة) من رصيدك.`
+                    : `Are you sure you want to use your points to apply a ${discount.percentage}% discount? The same number of points (${discount.percentage}) will be deducted from your balance.`}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>
+                {language === "ar" ? "إلغاء" : "Cancel"}
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmDiscountApply}>
+                {language === "ar" ? "تأكيد" : "Confirm"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
   );
 };
