@@ -56,7 +56,7 @@ const PurchaseHistory = () => {
   const { language } = useLanguage();
   const { addPoints } = useLoyalty();
   const { toast } = useToast();
-
+  const role = typeof window !== "undefined" ? localStorage.getItem("userRole") : null;
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -190,7 +190,7 @@ const PurchaseHistory = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ action: "delivered" }),
+        body: JSON.stringify({ action: "delivered", role }),
       });
 
       if (!res.ok) {
@@ -270,11 +270,15 @@ const PurchaseHistory = () => {
           )}
 
           {!loading && !error && (
-              <div className="grid lg:grid-cols-3 gap-8">
+              <div className={`${role === 'user' ? 'grid lg:grid-cols-3 gap-8' : '' } `}>
                 {/* Loyalty Card Sidebar */}
-                <div className="lg:col-span-1">
-                  <LoyaltyCard />
-                </div>
+                {
+                  role === 'user' && (
+                        <div className="lg:col-span-1">
+                          <LoyaltyCard />
+                        </div>
+                    )
+                }
 
                 {/* Orders List */}
                 <div className="lg:col-span-2 space-y-6">
@@ -304,7 +308,7 @@ const PurchaseHistory = () => {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            {purchase.isConfirmed && purchase.pointsEarned > 0 && (
+                            {purchase.isConfirmed && purchase.pointsEarned > 0 && role === 'user' && (
                                 <Badge variant="secondary" className="flex items-center gap-1">
                                   <Star className="h-3 w-3" />
                                   +{purchase.pointsEarned} pts
@@ -333,7 +337,7 @@ const PurchaseHistory = () => {
                         </div>
 
                         {/* Potential Points Display */}
-                        {!purchase.isConfirmed && purchase.status === "shipped" && (
+                        {!purchase.isConfirmed && purchase.status === "shipped" && role === 'user' && (
                             <div className="mb-4 flex items-center gap-2 text-sm bg-primary/10 rounded-lg p-3">
                               <Gift className="h-4 w-4 text-primary" />
                               <span>
@@ -394,8 +398,8 @@ const PurchaseHistory = () => {
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <CreditCard className="h-4 w-4" />
                             <span className="text-sm">
-                        {language === "ar" ? "مدفوع" : "Paid"}
-                      </span>
+                              {language === "ar" ? "مدفوع" : "Paid"}
+                            </span>
                           </div>
                           <div className="text-right">
                             <p className="text-sm text-muted-foreground">

@@ -81,10 +81,6 @@ const Login = () => {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/5 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 text-2xl font-bold text-primary mb-2">
-            <Package className="h-8 w-8" />
-            <span>{language === 'ar' ? 'المتجر' : 'Store'}</span>
-          </Link>
           <h1 className="text-3xl font-bold mt-4">
             {language === 'ar' ? 'تسجيل الدخول' : 'Login'}
           </h1>
@@ -138,8 +134,6 @@ const Login = () => {
             </span>
           </div>
         </div>
-
-
       </div>
     </div>
   );

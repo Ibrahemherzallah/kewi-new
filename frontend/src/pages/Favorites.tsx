@@ -7,10 +7,29 @@ import { useToast } from "@/hooks/use-toast";
 import { Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+type BackendProduct = {
+  _id: string;
+  id?: string; // your internal code "9999" etc.
+  name?: string | { en: string; ar: string };
+  description?: string | { en: string; ar: string };
+  image?: string[];     // from DB
+  images?: string[];    // in case some endpoints use this
+  stockNumber?: number;
+  customerPrice?: number;
+  wholesalerPrice?: number;
+  isMultiColor? : boolean;
+  salePrice?: number;
+  isOnSale?: boolean;
+  isSoldOut?: boolean;
+  gender?: string;
+  size?: string;
+  color?: string;
+  brand?: string | { name: string };
+};
 
 const Favorites = () => {
   const { favorites } = useFavorites();        // now favorites = array of full products
-  const { language } = useLanguage();
+  const { t,language } = useLanguage();
   const { toast } = useToast();
 
   // Helper: get a nice display name regardless of shape
@@ -25,73 +44,71 @@ const Favorites = () => {
         ""
     );
   };
+  const getProductName = (product: BackendProduct, language: string) => {
+    if (!product.name) return language === "ar" ? "منتج بدون اسم" : "Unnamed product";
+    if (typeof product.name === "string") return product.name;
 
-  const handleAddToCart = (product: any) => {
-    const existingCart = JSON.parse(localStorage.getItem("cart") || "[]");
-
-    // Normalize ID
-    const id = product._id || product.id;
-    if (!id) {
-      console.warn("Product has no id/_id, cannot add to cart", product);
-      return;
-    }
-
-    // Try to find existing item by whichever id we used before
-    const existingItem = existingCart.find(
-        (item: any) =>
-            item.id === id || item._id === id // support old shape too
+    return (
+        product.name[language] ||
+        product.name.en ||
+        Object.values(product.name)[0] ||
+        ""
     );
+  };
 
-    // Normalize name for cart
-    let name = product.name;
-    if (typeof name === "string") {
-      name = { en: name, ar: name };
-    } else {
-      // ensure both languages exist as much as possible
-      name = {
-        en: name?.en || name?.ar || Object.values(name || {})[0] || "",
-        ar: name?.ar || name?.en || Object.values(name || {})[0] || "",
-      };
-    }
+  const handleAddToCart = (product: BackendProduct) => {
+    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
 
-    // Normalize images
-    const rawImages = product.images ?? product.image ?? [];
-    const images: string[] = Array.isArray(rawImages)
-        ? rawImages
-        : rawImages
-            ? [rawImages]
-            : [];
+    // 🟦 1) Auto-select variant if multi color
+    const isMulti = product.isMultiColor && Array.isArray(product.variants);
+    console.log("isMulti is :" , isMulti)
+    const selectedVariant = isMulti && product.variants.length > 0
+        ? product.variants[0]          // 👈 first variant by default
+        : null;
+    console.log("isMulti selectedVariant is :" , selectedVariant)
 
-    const retailPrice =
-        product.retailPrice ??
-        product.customerPrice ??
-        product.costPrice ??
-        0;
+    // 🟦 2) Choose correct images
+    const variantImage = selectedVariant?.image ? [selectedVariant.image] : [];
+
+    const fallbackImages =
+        // some products use `images`, some `image`
+        (Array.isArray((product as any).images) && (product as any).images.length > 0)
+            ? (product as any).images
+            : (Array.isArray(product.image) ? product.image : (product.image ? [product.image] : []));
+
+    const images = variantImage.length > 0 ? variantImage : fallbackImages;
+
+    // 🟦 3) Composite id (per color) – same pattern as ProductDetails
+    const compositeId = selectedVariant
+        ? `${product._id}-${selectedVariant._id}`
+        : product._id;
+
+    // 🟦 4) Find existing item by composite id
+    const existingItem = cart.find((item: any) => item.id === compositeId);
 
     if (existingItem) {
       existingItem.quantity = (existingItem.quantity || 1) + 1;
     } else {
-      existingCart.push({
-        id,            // standardize on id for new items
-        name,
-        retailPrice,
-        images,
+      cart.push({
+        ...product,
+        id: compositeId,           // unique per product+variant
+        _id: product._id,          // REAL product id for backend
         quantity: 1,
+        images,
+        color: selectedVariant?.color || product?.color,
+        variantId: selectedVariant?._id || null,
       });
     }
 
-    localStorage.setItem("cart", JSON.stringify(existingCart));
+    localStorage.setItem("cart", JSON.stringify(cart));
 
-    const displayName = getDisplayName(product);
+    const productName = getProductName(product, language);
 
     toast({
-      title: language === "ar" ? "تمت الإضافة للسلة" : "Added to cart",
-      description:
-          displayName +
-          " " +
-          (language === "ar"
-              ? "تمت إضافته إلى سلتك"
-              : "has been added to your cart."),
+      title: t("toast.addedToCart"),
+      description: `${productName}${
+          selectedVariant ? ` (${selectedVariant.color})` : ""
+      } ${t("toast.addedDesc")}`,
     });
   };
 

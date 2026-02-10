@@ -25,6 +25,26 @@ type ApiProduct = {
     customerPrice?: number;
     wholesalerPrice?: number;
     stockNumber?: number;
+    size?: string;
+};
+type BackendProduct = {
+    _id: string;
+    id?: string; // your internal code "9999" etc.
+    name?: string | { en: string; ar: string };
+    description?: string | { en: string; ar: string };
+    image?: string[];     // from DB
+    images?: string[];    // in case some endpoints use this
+    stockNumber?: number;
+    customerPrice?: number;
+    wholesalerPrice?: number;
+    isMultiColor? : boolean;
+    salePrice?: number;
+    isOnSale?: boolean;
+    isSoldOut?: boolean;
+    gender?: string;
+    size?: string;
+    color?: string;
+    brand?: string | { name: string };
 };
 
 type Category = {
@@ -40,13 +60,13 @@ type Brand = {
 const CategoryProducts = () => {
     const { categoryId } = useParams<{ categoryId: string }>();
     const { toast } = useToast();
-    const { language } = useLanguage();
-
+    const { t, language } = useLanguage();
+    const [sortOrder, setSortOrder] = useState<string>("latest"); // 👈 new (الأحدث)
     const [products, setProducts] = useState<ApiProduct[]>([]);
     const [category, setCategory] = useState<Category | null>(null);
     const [brands, setBrands] = useState<Brand[]>([]);
     const [selectedBrand, setSelectedBrand] = useState<string>("all");
-
+    const [selectedSize, setSelectedSize] = useState<string>("all");
     const [searchQuery, setSearchQuery] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -114,59 +134,134 @@ const CategoryProducts = () => {
 
     const isHandbagsCategory = category?.name === "حقائب اليد";
 
-    const filteredProducts = products.filter((p) => {
-        const q = searchQuery.toLowerCase();
-        const name = getLocalizedName(p).toLowerCase();
-        const desc = getLocalizedDescription(p).toLowerCase();
-        const internalId = (p.id || "").toLowerCase();
+    const filteredProducts = [...products]
+        .filter((p) => {
+            const q = searchQuery.toLowerCase();
+            const name = getLocalizedName(p).toLowerCase();
+            const desc = getLocalizedDescription(p).toLowerCase();
+            const internalId = (p.id || "").toLowerCase();
 
-        const matchesSearch =
-            name.includes(q) || desc.includes(q) || internalId.includes(q);
+            const matchesSearch =
+                name.includes(q) || desc.includes(q) || internalId.includes(q);
 
-        // brand filter only active for handbags category
-        let matchesBrand = true;
-        if (isHandbagsCategory && selectedBrand !== "all") {
-            if (!p.brandId) {
-                matchesBrand = false;
-            } else if (typeof p.brandId === "object") {
-                matchesBrand = p.brandId?._id === selectedBrand;
-            } else {
-                matchesBrand = p.brandId === selectedBrand;
+            // brand filter only active for handbags category
+            let matchesBrand = true;
+            if (isHandbagsCategory && selectedBrand !== "all") {
+                if (!p.brandId) {
+                    matchesBrand = false;
+                } else if (typeof p.brandId === "object") {
+                    matchesBrand = p.brandId?._id === selectedBrand;
+                } else {
+                    matchesBrand = p.brandId === selectedBrand;
+                }
             }
-        }
 
-        return matchesSearch && matchesBrand;
-    });
+            // size filter (for كل التصنيفات)
+            let matchesSize = true;
+            if (selectedSize !== "all") {
+                const productSize = (p as any).size; // or p.size if you added it to the type
+                matchesSize = productSize === selectedSize;
+            }
 
-    const handleAddToCart = (product: ApiProduct) => {
+            return matchesSearch && matchesBrand && matchesSize;
+        })
+        .sort((a, b) => {
+            // 🔹 Sorting by createdAt if available, otherwise leave as-is
+            const aCreated = (a as any).createdAt;
+            const bCreated = (b as any).createdAt;
+
+            if (sortOrder === "random") {
+                return Math.random() - 0.5;
+            }
+
+            // if we don't have dates, don't change order
+            if (!aCreated || !bCreated) return 0;
+
+            const aTime = new Date(aCreated).getTime();
+            const bTime = new Date(bCreated).getTime();
+
+            if (sortOrder === "latest") {
+                // الأحدث → bigger date first
+                return bTime - aTime;
+            } else if (sortOrder === "oldest") {
+                // الأقدم → smaller date first
+                return aTime - bTime;
+            }
+
+            return 0;
+        });
+    const getProductName = (product: BackendProduct, language: string) => {
+        if (!product.name) return language === "ar" ? "منتج بدون اسم" : "Unnamed product";
+        if (typeof product.name === "string") return product.name;
+
+        return (
+            product.name[language] ||
+            product.name.en ||
+            Object.values(product.name)[0] ||
+            ""
+        );
+    };
+
+    const handleAddToCart = (product: any) => {
+        console.log("handleAddToCart")
         const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-        const existingItem = cart.find((item: any) => item._id === product._id);
+
+        // 🟦 1) Auto-select variant if multi color
+        const isMulti = product.isMultiColor && Array.isArray(product.variants);
+        console.log("isMulti is :" , isMulti)
+        const selectedVariant = isMulti && product.variants.length > 0
+            ? product.variants[0]          // 👈 first variant by default
+            : null;
+        console.log("isMulti selectedVariant is :" , selectedVariant)
+
+        // 🟦 2) Choose correct images
+        const variantImage = selectedVariant?.image ? [selectedVariant.image] : [];
+
+        const fallbackImages =
+            // some products use `images`, some `image`
+            (Array.isArray((product as any).images) && (product as any).images.length > 0)
+                ? (product as any).images
+                : (Array.isArray(product.image) ? product.image : (product.image ? [product.image] : []));
+
+        const images = variantImage.length > 0 ? variantImage : fallbackImages;
+
+        // 🟦 3) Composite id (per color) – same pattern as ProductDetails
+        const compositeId = selectedVariant
+            ? `${product._id}-${selectedVariant._id}`
+            : product._id;
+
+        // 🟦 4) Find existing item by composite id
+        const existingItem = cart.find((item: any) => item.id === compositeId);
 
         if (existingItem) {
-            existingItem.quantity += 1;
+            existingItem.quantity = (existingItem.quantity || 1) + 1;
         } else {
-            cart.push({ ...product, quantity: 1 });
+            cart.push({
+                ...product,
+                id: compositeId,           // unique per product+variant
+                _id: product._id,          // REAL product id for backend
+                quantity: 1,
+                images,
+                color: selectedVariant?.color || product.color,
+                variantId: selectedVariant?._id || null,
+            });
         }
 
         localStorage.setItem("cart", JSON.stringify(cart));
 
-        const displayName = getLocalizedName(product);
+        const productName = getProductName(product, language);
 
         toast({
-            title: language === "ar" ? "تمت الإضافة للسلة" : "Added to cart",
-            description:
-                displayName +
-                " " +
-                (language === "ar"
-                    ? "تمت إضافته إلى سلتك"
-                    : "has been added to your cart."),
+            title: t("toast.addedToCart"),
+            description: `${productName}${
+                selectedVariant ? ` (${selectedVariant.color})` : ""
+            } ${t("toast.addedDesc")}`,
         });
     };
 
     return (
         <div className="min-h-screen bg-background">
             <Navbar />
-
             <div className="container mx-auto px-4 py-12">
                 {/* Back + title */}
                 <div className="flex items-center justify-between mb-8">
@@ -214,32 +309,92 @@ const CategoryProducts = () => {
                     </div>
 
                     {/* Brand filter (only for handbags) */}
-                    {isHandbagsCategory && (
+                    <div className="w-full md:w-auto flex flex-col md:flex-row gap-3">
+                        {/* Brand filter (only for handbags) */}
+                        {isHandbagsCategory && (
+                            <div className="w-full md:w-64">
+                                <Select
+                                    value={selectedBrand}
+                                    onValueChange={(value) => setSelectedBrand(value)}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue
+                                            placeholder={
+                                                language === "ar" ? "تصفية حسب الماركة" : "Filter by brand"
+                                            }
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">
+                                            {language === "ar" ? "كل الماركات" : "All brands"}
+                                        </SelectItem>
+                                        {brands.map((brand) => (
+                                            <SelectItem key={brand._id} value={brand._id}>
+                                                {brand.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+
+                        {/* Size filter (always visible) */}
                         <div className="w-full md:w-64">
                             <Select
-                                value={selectedBrand}
-                                onValueChange={(value) => setSelectedBrand(value)}
+                                value={selectedSize}
+                                onValueChange={(value) => setSelectedSize(value)}
                             >
                                 <SelectTrigger>
                                     <SelectValue
                                         placeholder={
-                                            language === "ar" ? "تصفية حسب الماركة" : "Filter by brand"
+                                            language === "ar" ? "تصفية حسب المقاس" : "Filter by size"
                                         }
                                     />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">
-                                        {language === "ar" ? "كل الماركات" : "All brands"}
+                                        {language === "ar" ? "كل المقاسات" : "All sizes"}
                                     </SelectItem>
-                                    {brands.map((brand) => (
-                                        <SelectItem key={brand._id} value={brand._id}>
-                                            {brand.name}
-                                        </SelectItem>
-                                    ))}
+                                    <SelectItem value="كبير">
+                                        {language === "ar" ? "كبير" : "Large"}
+                                    </SelectItem>
+                                    <SelectItem value="وسط">
+                                        {language === "ar" ? "وسط" : "Medium"}
+                                    </SelectItem>
+                                    <SelectItem value="صغير">
+                                        {language === "ar" ? "صغير" : "Small"}
+                                    </SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
-                    )}
+
+                        {/* 🔹 Sort dropdown (always visible) */}
+                        <div className="w-full md:w-64">
+                            <Select
+                                value={sortOrder}
+                                onValueChange={(value) => setSortOrder(value)}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue
+                                        placeholder={
+                                            language === "ar" ? "ترتيب المنتجات" : "Sort products"
+                                        }
+                                    />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="latest">
+                                        {language === "ar" ? "الأحدث" : "Newest"}
+                                    </SelectItem>
+                                    <SelectItem value="oldest">
+                                        {language === "ar" ? "الأقدم" : "Oldest"}
+                                    </SelectItem>
+                                    <SelectItem value="random">
+                                        {language === "ar" ? "عشوائي" : "Random"}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
                 </div>
 
                 {error && (

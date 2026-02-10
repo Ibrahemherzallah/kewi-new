@@ -64,6 +64,22 @@ export const ProductCard = ({product, showWholesale = false, onAddToCart,}: Prod
 
     const salePrice: number | null = product.salePrice ?? null;
 
+    const badgeEn = product?.isSoldOut
+        ? "sold out"
+        : product?.isOnSale
+            ? "on sale"
+            : product?.isSoon
+                ? "coming soon"
+                : "available";
+
+    const badgeAr = product?.isSoldOut
+        ? "نفذ"
+        : product?.isOnSale
+            ? "معروض للبيع"
+            : product?.isSoon
+                ? "قريباً"
+                : "متوفر";
+
     // stock: either stockNumber or warehouse+kewi
     const totalStock: number =
         product.stockNumber ??
@@ -71,7 +87,6 @@ export const ProductCard = ({product, showWholesale = false, onAddToCart,}: Prod
 
     const isOnSale: boolean = Boolean(product.isOnSale);
     const isSoldOut: boolean = Boolean(product.isSoldOut) || totalStock <= 0;
-    console.log("sssssssssssssssssss product is : , " , product)
 
     // brand: string or nested object
     const brandLabel: string =
@@ -171,9 +186,9 @@ export const ProductCard = ({product, showWholesale = false, onAddToCart,}: Prod
                         />
                     ) : (
                         <span className="text-xs text-muted-foreground">
-              {language === "ar" ? "لا توجد صورة" : "No image"}
-            </span>
-                    )}
+                          {language === "ar" ? "لا توجد صورة" : "No image"}
+                        </span>
+                                )}
 
                     {isSoldOut && (
                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white font-semibold text-lg">
@@ -212,13 +227,7 @@ export const ProductCard = ({product, showWholesale = false, onAddToCart,}: Prod
                             }
                             className="text-xs"
                         >
-                            {isSoldOut
-                                ? language === "ar"
-                                    ? "غير متوفر"
-                                    : "Out of stock"
-                                : `${totalStock} ${
-                                    language === "ar" ? "متوفر" : "in stock"
-                                }`}
+                            {language === "ar" ? badgeAr : badgeEn}
                         </Badge>
                     )}
                     {brandLabel && (

@@ -47,11 +47,6 @@ interface City {
   region: "w" | "d" | "q";
 }
 
-interface DeliveryType {
-  name: string; // "مستعجل" | "عادي"
-  duration: string;
-}
-
 const Cart = () => {
   const { t, language } = useLanguage();
   const { toast } = useToast();
@@ -62,7 +57,6 @@ const Cart = () => {
   const [applyDiscount, setApplyDiscount] = useState(false);
   const [appliedDiscountPercentage, setAppliedDiscountPercentage] = useState<number | null>(null); // 👈 NEW
   const [loading,setLoading] = useState(false);
-  // const fastName = deliveryTypes[0].name[language]; // "مستعجل" or "Express"
   const [formData, setFormData] = useState<CheckoutFormData>({
     name: "",
     phone: "",
@@ -71,15 +65,12 @@ const Cart = () => {
     notes: "",
     paymentMethod: "cash",
   });
-
   // Cities / regions
   const [cities] = useState([
     { name: { ar: "الضفة الغربية", en: "West Bank" }, region: "w" },
     { name: { ar: "الداخل", en: "48 Territories" }, region: "d" },
     { name: { ar: "القدس", en: "Jerusalem" }, region: "q" },
   ]);
-
-
   const [deliveryTypes] = useState([
     {
       name: { ar: "مستعجل", en: "Express" },
@@ -90,19 +81,14 @@ const Cart = () => {
       duration: { ar: "3 - 5 يوم", en: "3 - 5 days" }
     }
   ]);
-
-  const fastName = deliveryTypes[0].name[language]; // "مستعجل" or "Express"
-
   const [selectedRegion, setSelectedRegion] = useState<string>("");
   const [selectedType, setSelectedType] = useState<string>("");
   const [deliveryPrice, setDeliveryPrice] = useState<number>(0);
 
   const discount = getDiscount();
-
-  const token =
-      typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  const role =
-      typeof window !== "undefined" ? localStorage.getItem("userRole") : null;
+  console.log("The discount is : ", discount)
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const role = typeof window !== "undefined" ? localStorage.getItem("userRole") : null;
   const isLoggedIn = !!token;
   const isWholesalerUser = role === "wholesaler";
 
@@ -131,12 +117,8 @@ const Cart = () => {
 
   // unified price logic
   const getPricesForItem = (item: CartItem) => {
-    const customer =
-        item.customerPrice ?? item.retailPrice ?? item.costPrice ?? 0;
-
-    const wholesale =
-        item.wholesalerPrice ?? item.wholesalePrice ?? customer;
-
+    const customer = item.customerPrice ?? item.retailPrice ?? item.costPrice ?? 0;
+    const wholesale = item.wholesalerPrice ?? item.wholesalePrice ?? customer;
     const sale = item.salePrice ?? null;
     const isOnSale = !!item.isOnSale;
 
@@ -278,7 +260,7 @@ const Cart = () => {
     return 0;
   };
 
-  const discountAmount = calculateDiscount();
+  const discountAmount = role === 'user' ? calculateDiscount() : 0 ;
   const total = subtotal - discountAmount;
   const grandTotal = total + deliveryPrice;
 
@@ -509,7 +491,7 @@ const Cart = () => {
   };
 
   const handleConfirmDiscountApply = async () => {
-    const discountInfo = discount; // from getDiscount()
+    const discountInfo = discount;
     const percentage = discountInfo.percentage;
 
     // Cost rule: 1 point per 1% discount
@@ -720,94 +702,98 @@ const Cart = () => {
                 {/* Right column: loyalty + summary */}
                 <div className="lg:col-span-1 space-y-4">
                   {/* Loyalty Points Banner */}
-                  <div className="bg-gradient-to-br from-primary/10 to-secondary/10 border border-primary/20 rounded-2xl p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Star className="h-5 w-5 text-primary" />
-                      <span className="font-semibold">
-                    {language === "ar" ? "نقاط الولاء" : "Loyalty Points"}
-                  </span>
-                      <Badge variant="secondary">{points} pts</Badge>
-                    </div>
-
-                    {!isLoggedIn && (
-                        <p className="text-xs text-muted-foreground mb-2">
-                          {language === "ar"
-                              ? "سجّل دخولك أو أنشئ حساباً لبدء جمع النقاط."
-                              : "Log in or create an account to start collecting points."}
-                        </p>
-                    )}
-
-                    {/* Free Product Option */}
-                    {isLoggedIn && canRedeemFreeProduct && (
-                        <div className="mb-3 p-3 bg-background/60 rounded-lg">
-                          <p className="text-sm font-medium mb-2 flex items-center gap-1">
-                            <Gift className="h-4 w-4 text-primary" />
-                            {language === "ar"
-                                ? "اختر منتج مجاني (100 نقطة)"
-                                : "Choose a free product (100 pts)"}
-                          </p>
-                          <RadioGroup
-                              value={freeProductId || ""}
-                              onValueChange={handleSelectFreeProduct}
-                          >
-                            {cart.map((item) => {
-                              const id = getItemId(item);
-                              const { mainPrice } = getPricesForItem(item);
-                              return (
-                                  <div
-                                      key={id}
-                                      className="flex items-center space-x-2"
-                                  >
-                                    <RadioGroupItem value={id} id={`free-${id}`} />
-                                    <Label
-                                        htmlFor={`free-${id}`}
-                                        className="text-sm cursor-pointer"
-                                    >
-                                      {getItemName(item)} ({mainPrice.toFixed(2)} ₪)
-                                    </Label>
-                                  </div>
-                              );
-                            })}
-                          </RadioGroup>
-                        </div>
-                    )}
-
-                    {/* Percentage Discount Option */}
-                    {isLoggedIn &&
-                        discount.percentage > 0 &&
-                        discount.type === "discount" &&
-                        !freeProductId && (
-                            <div className="p-3 bg-background/60 rounded-lg">
-                              <Button
-                                  variant={applyDiscount ? "default" : "outline"}
-                                  size="sm"
-                                  className="w-full"
-                                  onClick={handleApplyPercentDiscountClick}
-                              >
-                                <Tag className="h-4 w-4 mr-2" />
-                                {applyDiscount
-                                    ? language === "ar"
-                                        ? `تم تطبيق خصم ${
-                                            appliedDiscountPercentage ?? discount.percentage
-                                        }%`
-                                        : `${
-                                            appliedDiscountPercentage ?? discount.percentage
-                                        }% discount applied`
-                                    : language === "ar"
-                                        ? `تطبيق خصم ${discount.percentage}%`
-                                        : `Apply ${discount.percentage}% discount`}
-                              </Button>
+                  {
+                    role === 'user' && (
+                          <div className="bg-gradient-to-br from-primary/10 to-secondary/10 border border-primary/20 rounded-2xl p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Star className="h-5 w-5 text-primary" />
+                              <span className="font-semibold">
+                        {language === "ar" ? "نقاط الولاء" : "Loyalty Points"}
+                      </span>
+                              <Badge variant="secondary">{points} pts</Badge>
                             </div>
-                        )}
 
-                    {discount.type === "none" && (
-                        <p className="text-sm text-muted-foreground">
-                          {language === "ar"
-                              ? "اجمع 20 نقطة للحصول على خصم 20%"
-                              : "Collect 20 points to get 20% off"}
-                        </p>
-                    )}
-                  </div>
+                            {!isLoggedIn && (
+                                <p className="text-xs text-muted-foreground mb-2">
+                                  {language === "ar"
+                                      ? "سجّل دخولك أو أنشئ حساباً لبدء جمع النقاط."
+                                      : "Log in or create an account to start collecting points."}
+                                </p>
+                            )}
+
+                            {/* Free Product Option */}
+                            {isLoggedIn && canRedeemFreeProduct && (
+                                <div className="mb-3 p-3 bg-background/60 rounded-lg">
+                                  <p className="text-sm font-medium mb-2 flex items-center gap-1">
+                                    <Gift className="h-4 w-4 text-primary" />
+                                    {language === "ar"
+                                        ? "اختر منتج مجاني (100 نقطة)"
+                                        : "Choose a free product (100 pts)"}
+                                  </p>
+                                  <RadioGroup
+                                      value={freeProductId || ""}
+                                      onValueChange={handleSelectFreeProduct}
+                                  >
+                                    {cart.map((item) => {
+                                      const id = getItemId(item);
+                                      const { mainPrice } = getPricesForItem(item);
+                                      return (
+                                          <div
+                                              key={id}
+                                              className="flex items-center space-x-2"
+                                          >
+                                            <RadioGroupItem value={id} id={`free-${id}`} />
+                                            <Label
+                                                htmlFor={`free-${id}`}
+                                                className="text-sm cursor-pointer"
+                                            >
+                                              {getItemName(item)} ({mainPrice.toFixed(2)} ₪)
+                                            </Label>
+                                          </div>
+                                      );
+                                    })}
+                                  </RadioGroup>
+                                </div>
+                            )}
+
+                            {/* Percentage Discount Option */}
+                            {isLoggedIn &&
+                                discount.percentage > 0 &&
+                                discount.type === "discount" &&
+                                !freeProductId && (
+                                    <div className="p-3 bg-background/60 rounded-lg">
+                                      <Button
+                                          variant={applyDiscount ? "default" : "outline"}
+                                          size="sm"
+                                          className="w-full"
+                                          onClick={handleApplyPercentDiscountClick}
+                                      >
+                                        <Tag className="h-4 w-4 mr-2" />
+                                        {applyDiscount
+                                            ? language === "ar"
+                                                ? `تم تطبيق خصم ${
+                                                    appliedDiscountPercentage ?? discount.percentage
+                                                }%`
+                                                : `${
+                                                    appliedDiscountPercentage ?? discount.percentage
+                                                }% discount applied`
+                                            : language === "ar"
+                                                ? `تطبيق خصم ${discount.percentage}%`
+                                                : `Apply ${discount.percentage}% discount`}
+                                      </Button>
+                                    </div>
+                                )}
+
+                            {discount.type === "none" && (
+                                <p className="text-sm text-muted-foreground">
+                                  {language === "ar"
+                                      ? "اجمع 20 نقطة للحصول على خصم 20%"
+                                      : "Collect 20 points to get 20% off"}
+                                </p>
+                            )}
+                          </div>
+                      )
+                  }
 
                   {/* Order Summary */}
                   <div className="bg-card border border-border rounded-2xl p-6 sticky top-24">
@@ -831,7 +817,7 @@ const Cart = () => {
                             : language === "ar"
                                 ? `خصم ${appliedDiscountPercentage}%`
                                 : `${appliedDiscountPercentage}% discount`}
-                      </span>
+                            </span>
                             <span>- {discountAmount.toFixed(2)} ₪</span>
                           </div>
                       )}

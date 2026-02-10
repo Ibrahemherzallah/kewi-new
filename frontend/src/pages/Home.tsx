@@ -157,7 +157,7 @@ const Home = () => {
         _id: product._id,          // REAL product id for backend
         quantity: 1,
         images,
-        color: selectedVariant?.color || null,
+        color: selectedVariant?.color || product?.color,
         variantId: selectedVariant?._id || null,
       });
     }
@@ -224,16 +224,10 @@ const Home = () => {
                   لا توجد تصنيفات متاحة حالياً
                 </p>
             ) : (
-                <Carousel
-                    className="w-full max-w-6xl mx-auto"
-                    opts={{ align: "start", loop: true }}
-                >
+                <Carousel className="w-full max-w-6xl mx-auto" dir={'ltr'} opts={{ align: "start", loop: true }}>
                   <CarouselContent>
                     {categories.map((category) => (
-                        <CarouselItem
-                            key={category._id}
-                            className="md:basis-1/2 lg:basis-1/3"
-                        >
+                        <CarouselItem key={category._id} className="md:basis-1/2 lg:basis-1/3">
                           <Link to={`/category/${category._id}`}>
                             <div className="relative group overflow-hidden rounded-2xl h-80 cursor-pointer">
                               <img
@@ -252,10 +246,10 @@ const Home = () => {
                     ))}
                   </CarouselContent>
                   <CarouselPrevious
-                      className={language === "ar" ? "left-auto right-12" : "left-12"}
+                      className= "left-12"
                   />
                   <CarouselNext
-                      className={language === "ar" ? "right-auto left-12" : "right-12"}
+                      className= "right-12"
                   />
                 </Carousel>
             )}

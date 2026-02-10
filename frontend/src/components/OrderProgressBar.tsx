@@ -14,6 +14,7 @@ interface OrderProgressBarProps {
 
 export const OrderProgressBar = ({status, onConfirmReceived, isConfirmed, orderId,}: OrderProgressBarProps) => {
   const { language } = useLanguage();
+  const role = typeof window !== "undefined" ? localStorage.getItem("userRole") : null;
 
   const steps: { key: UIStatus; label: string; icon: any }[] = [
     {
@@ -149,7 +150,7 @@ export const OrderProgressBar = ({status, onConfirmReceived, isConfirmed, orderI
         </div>
 
         {/* Warning about points */}
-        {status === "shipped" && !isConfirmed && (
+        {status === "shipped" && !isConfirmed && role === 'user' && (
             <div className="bg-secondary/50 border border-secondary rounded-lg p-3 mt-2">
               <p className="text-sm text-secondary-foreground text-center">
                 {language === "ar"

@@ -36,6 +36,8 @@ const Profile = () => {
         dob: "",
     });
     const [saving, setSaving] = useState(false);
+    const role = typeof window !== "undefined" ? localStorage.getItem("userRole") : null;
+
     console.log("user is :" , user)
     // loyalty
     const { points, getDiscount } = useLoyalty();
@@ -190,11 +192,15 @@ const Profile = () => {
                     {language === "ar" ? "حسابي" : "My Account"}
                 </h1>
 
-                <Tabs defaultValue="loyalty" className="space-y-6">
-                    <TabsList className="grid grid-cols-3 max-w-xl">
-                        <TabsTrigger value="loyalty">
-                            {language === "ar" ? "نقاط الولاء" : "Loyalty points"}
-                        </TabsTrigger>
+                <Tabs defaultValue={`${role === 'user' ? "loyalty" : "orders" }`} className="space-y-6">
+                    <TabsList className={`${role === 'user' ?  "grid grid-cols-3 max-w-xl"  : "grid grid-cols-2 max-w-xl"}`}>
+                        {
+                            role === 'user' && (
+                                <TabsTrigger value="loyalty">
+                                    {language === "ar" ? "نقاط الولاء" : "Loyalty points"}
+                                </TabsTrigger>
+                            )
+                        }
                         <TabsTrigger value="orders">
                             {language === "ar" ? "طلباتي" : "My orders"}
                         </TabsTrigger>
@@ -204,130 +210,134 @@ const Profile = () => {
                     </TabsList>
 
                     {/* LOYALTY TAB */}
-                    <TabsContent value="loyalty" className="space-y-6">
-                        <div className="grid md:grid-cols-3 gap-4">
-                            {/* Available points */}
-                            <Card className="p-5 flex flex-col justify-between bg-gradient-to-br from-background to-background/80 border-primary/20">
-                                <div className="flex items-center justify-between mb-2">
+                    {
+                        role === 'user' && (
+                            <TabsContent value="loyalty" className="space-y-6">
+                                <div className="grid md:grid-cols-3 gap-4">
+                                    {/* Available points */}
+                                    <Card className="p-5 flex flex-col justify-between bg-gradient-to-br from-background to-background/80 border-primary/20">
+                                        <div className="flex items-center justify-between mb-2">
                                   <span className="font-semibold flex items-center gap-2">
                                     <Star className="h-4 w-4 text-primary" />
                                       {language === "ar" ? "النقاط المتاحة" : "Available points"}
                                   </span>
-                                </div>
-                                <div className="text-3xl font-bold">{points}</div>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    {language === "ar" ? "إجمالي النقاط" : "Total points"}
-                                </p>
-                            </Card>
+                                        </div>
+                                        <div className="text-3xl font-bold">{points}</div>
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            {language === "ar" ? "إجمالي النقاط" : "Total points"}
+                                        </p>
+                                    </Card>
 
-                            {/* Current discount */}
-                            <Card className="p-5 bg-gradient-to-br from-emerald-900/40 to-emerald-700/20 border-emerald-500/40">
-                                <div className="flex items-center justify-between mb-2">
+                                    {/* Current discount */}
+                                    <Card className="p-5 bg-gradient-to-br from-emerald-900/40 to-emerald-700/20 border-emerald-500/40">
+                                        <div className="flex items-center justify-between mb-2">
                                   <span className="font-semibold flex items-center gap-2">
                                     <Percent className="h-4 w-4 text-emerald-300" />
                                       {language === "ar" ? "الخصم الحالي" : "Current discount"}
                                   </span>
-                                </div>
-                                <p className="text-sm text-emerald-50">{currentDiscountText}</p>
-                            </Card>
+                                        </div>
+                                        <p className="text-sm text-emerald-50">{currentDiscountText}</p>
+                                    </Card>
 
-                            {/* Next reward */}
-                            <Card className="p-5 bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/40">
-                                <div className="flex items-center justify-between mb-2">
+                                    {/* Next reward */}
+                                    <Card className="p-5 bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/40">
+                                        <div className="flex items-center justify-between mb-2">
                                   <span className="font-semibold flex items-center gap-2">
                                     <Gift className="h-4 w-4 text-secondary-foreground" />
                                       {language === "ar" ? "المكافأة القادمة" : "Next reward"}
                                   </span>
-                                </div>
-                                <Progress value={progress} className="h-2 mb-2" />
-                                <p className="text-xs text-muted-foreground">
-                                    {language === "ar" ? nextReward.labelAr : nextReward.labelEn}
-                                </p>
-                            </Card>
-                        </div>
-
-                        {/* How loyalty works */}
-                        <Card className="p-6">
-                            <h2 className="text-lg md:text-xl font-bold mb-2">
-                                {language === "ar"
-                                    ? "كيف تعمل نقاط الولاء؟"
-                                    : "How do loyalty points work?"}
-                            </h2>
-                            <p className="text-sm text-muted-foreground mb-4">
-                                {language === "ar"
-                                    ? "تعرف على طريقة كسب النقاط واستخدامها."
-                                    : "Learn how to earn and use your points."}
-                            </p>
-
-                            <div className="space-y-3">
-                                <div className="flex gap-3 items-start bg-muted/40 rounded-lg p-3">
-                                    <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
-                                        1
-                                    </div>
-                                    <div>
-                                        <p className="font-semibold">
-                                            {language === "ar" ? "اكسب النقاط" : "Earn points"}
+                                        </div>
+                                        <Progress value={progress} className="h-2 mb-2" />
+                                        <p className="text-xs text-muted-foreground">
+                                            {language === "ar" ? nextReward.labelAr : nextReward.labelEn}
                                         </p>
-                                        <p className="text-sm text-muted-foreground">
-                                            {language === "ar"
-                                                ? "احصل على نقطتين مقابل كل 50 شيكل تنفقه في المتجر."
-                                                : "Earn 2 points for every 50₪ you spend in the store."}
-                                        </p>
-                                    </div>
+                                    </Card>
                                 </div>
 
-                                <div className="flex gap-3 items-start bg-muted/40 rounded-lg p-3">
-                                    <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
-                                        2
-                                    </div>
-                                    <div>
-                                        <p className="font-semibold">
-                                            {language === "ar" ? "خصم 20%" : "20% discount"}
-                                        </p>
-                                        <p className="text-sm text-muted-foreground">
-                                            {language === "ar"
-                                                ? "عند الوصول إلى 20 نقطة، تحصل على خصم 20% على أي منتج."
-                                                : "When you reach 20 points, you get 20% off any product."}
-                                        </p>
-                                    </div>
-                                </div>
+                                {/* How loyalty works */}
+                                <Card className="p-6">
+                                    <h2 className="text-lg md:text-xl font-bold mb-2">
+                                        {language === "ar"
+                                            ? "كيف تعمل نقاط الولاء؟"
+                                            : "How do loyalty points work?"}
+                                    </h2>
+                                    <p className="text-sm text-muted-foreground mb-4">
+                                        {language === "ar"
+                                            ? "تعرف على طريقة كسب النقاط واستخدامها."
+                                            : "Learn how to earn and use your points."}
+                                    </p>
 
-                                <div className="flex gap-3 items-start bg-muted/40 rounded-lg p-3">
-                                    <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
-                                        3
-                                    </div>
-                                    <div>
-                                        <p className="font-semibold">
-                                            {language === "ar" ? "خصم إضافي" : "Extra discount"}
-                                        </p>
-                                        <p className="text-sm text-muted-foreground">
-                                            {language === "ar"
-                                                ? "بعد 20 نقطة، تحصل على خصم إضافي 5% مقابل كل 5 نقاط جديدة."
-                                                : "After 20 points, you earn an extra 5% discount for every additional 5 points."}
-                                        </p>
-                                    </div>
-                                </div>
+                                    <div className="space-y-3">
+                                        <div className="flex gap-3 items-start bg-muted/40 rounded-lg p-3">
+                                            <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
+                                                1
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold">
+                                                    {language === "ar" ? "اكسب النقاط" : "Earn points"}
+                                                </p>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {language === "ar"
+                                                        ? "احصل على نقطتين مقابل كل 50 شيكل تنفقه في المتجر."
+                                                        : "Earn 2 points for every 50₪ you spend in the store."}
+                                                </p>
+                                            </div>
+                                        </div>
 
-                                <div className="mt-2 rounded-lg border border-emerald-500/40 bg-emerald-900/25 p-4 flex gap-3 items-start">
-                                    <div className="w-6 h-6 rounded-full bg-emerald-500 text-emerald-950 flex items-center justify-center text-xs font-bold">
-                                        ★
+                                        <div className="flex gap-3 items-start bg-muted/40 rounded-lg p-3">
+                                            <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
+                                                2
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold">
+                                                    {language === "ar" ? "خصم 20%" : "20% discount"}
+                                                </p>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {language === "ar"
+                                                        ? "عند الوصول إلى 20 نقطة، تحصل على خصم 20% على أي منتج."
+                                                        : "When you reach 20 points, you get 20% off any product."}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-3 items-start bg-muted/40 rounded-lg p-3">
+                                            <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
+                                                3
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold">
+                                                    {language === "ar" ? "خصم إضافي" : "Extra discount"}
+                                                </p>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {language === "ar"
+                                                        ? "بعد 20 نقطة، تحصل على خصم إضافي 5% مقابل كل 5 نقاط جديدة."
+                                                        : "After 20 points, you earn an extra 5% discount for every additional 5 points."}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-2 rounded-lg border border-emerald-500/40 bg-emerald-900/25 p-4 flex gap-3 items-start">
+                                            <div className="w-6 h-6 rounded-full bg-emerald-500 text-emerald-950 flex items-center justify-center text-xs font-bold">
+                                                ★
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold text-emerald-200">
+                                                    {language === "ar"
+                                                        ? "منتج مجاني!"
+                                                        : "Free product!"}
+                                                </p>
+                                                <p className="text-sm text-emerald-100/90">
+                                                    {language === "ar"
+                                                        ? "عند الوصول إلى 100 نقطة، يمكنك اختيار أي منتج ليكون مجانياً."
+                                                        : "When you reach 100 points, you can choose any product in your cart to be completely free."}
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="font-semibold text-emerald-200">
-                                            {language === "ar"
-                                                ? "منتج مجاني!"
-                                                : "Free product!"}
-                                        </p>
-                                        <p className="text-sm text-emerald-100/90">
-                                            {language === "ar"
-                                                ? "عند الوصول إلى 100 نقطة، يمكنك اختيار أي منتج ليكون مجانياً."
-                                                : "When you reach 100 points, you can choose any product in your cart to be completely free."}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </Card>
-                    </TabsContent>
+                                </Card>
+                            </TabsContent>
+                        )
+                    }
 
                     {/* ORDERS TAB */}
                     <TabsContent value="orders">
