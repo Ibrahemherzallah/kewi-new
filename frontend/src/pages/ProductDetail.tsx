@@ -276,7 +276,7 @@ const ProductDetail = () => {
         _id: productToAdd._id,        // REAL product ID for backend
         quantity: qty,
         images,
-        color: selectedVariant?.color || null,
+        color: selectedVariant?.color || product?.color,
         variantId: selectedVariant?._id || null,
       });
     }

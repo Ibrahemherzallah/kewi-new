@@ -96,8 +96,7 @@ const calculatePointsFromPurchase = (amount) => {
 export const updateOrderStatus = async (req, res) => {
     try {
         const { id } = req.params;
-        const { action } = req.body; // 'confirm' | 'ship' | 'delivered'
-
+        const { action, role } = req.body; // 'confirm' | 'ship' | 'delivered'
 
         const order = await Purchase.findById(id);
         if (!order) {
@@ -149,23 +148,26 @@ export const updateOrderStatus = async (req, res) => {
 
         await order.save();
 
-        let totalPoints;
+        if(role === 'user'){
+            let totalPoints;
 
-        // If we earned points, update the user
-        if (earnedPoints > 0) {
-            const user = await User.findById(req.userId); // from auth middleware
-            if (user) {
-                user.loyaltyPoints = (user.loyaltyPoints || 0) + earnedPoints;
-                await user.save();
-                totalPoints = user.loyaltyPoints;
+            // If we earned points, update the user
+            if (earnedPoints > 0) {
+                const user = await User.findById(req.userId); // from auth middleware
+                if (user) {
+                    user.loyaltyPoints = (user.loyaltyPoints || 0) + earnedPoints;
+                    await user.save();
+                    totalPoints = user.loyaltyPoints;
+                }
             }
-        }
 
-        return res.json({
-            order,
-            earnedPoints,
-            totalPoints, // may be undefined if no points earned
-        });
+            return res.json({
+                order,
+                earnedPoints,
+                totalPoints, // may be undefined if no points earned
+            });
+        }
+        return res.status(200).json({order})
     } catch (error) {
         console.error("Error updating order status:", error);
         res.status(500).json({
@@ -266,7 +268,10 @@ export const updateStock = async (req, res) => {
     const { id, quantity, color, variantId } = req.body;
 
     try {
-        const product = await Product.findById(id);
+        const fixedId = variantId ? id.split("-")[0] : id;
+        console.log("fixedId id is ::, " , fixedId)
+
+        const product = await Product.findById(fixedId);
 
         if (!product) {
             return res.status(404).json({ message: "المنتج غير موجود" });
@@ -276,12 +281,13 @@ export const updateStock = async (req, res) => {
         if (qty <= 0) {
             return res.status(400).json({ message: "الكمية غير صحيحة" });
         }
+        console.log("variantId id is variantIdvariantIdvariantIdvariantId: ")
 
         // If product has variants and we know which color/variant was sold
         if (product.isMultiColor && product.variants && product.variants.length > 0) {
             // Find variant either by variantId or by color
             let variant = null;
-
+            console.log("variantId id is : " , variantId)
             if (variantId) {
                 variant = product.variants.id(variantId);
             }
@@ -289,6 +295,7 @@ export const updateStock = async (req, res) => {
             if (!variant && color) {
                 variant = product.variants.find((v) => v.color === color);
             }
+            console.log("variant id is : " , variant)
 
             if (!variant) {
                 return res.status(400).json({

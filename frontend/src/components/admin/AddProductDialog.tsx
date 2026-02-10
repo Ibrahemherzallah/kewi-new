@@ -226,6 +226,30 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({
       });
       return;
     }
+    if (!formData.customerPrice) {
+      toast({
+        title: "Validation Error",
+        description: "CustomerPrice is required",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!formData.wholesalerPrice) {
+      toast({
+        title: "Validation Error",
+        description: "WholesalerPrice is required",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!formData.salePrice) {
+      toast({
+        title: "Validation Error",
+        description: "SalePrice is required",
+        variant: "destructive",
+      });
+      return;
+    }
 
     // ✅ brand required if category is "حقائب اليد"
     const selectedCategory = categories.find(

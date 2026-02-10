@@ -1,19 +1,10 @@
 import {Link, useNavigate} from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  Package,
-  ShoppingBag,
-  BarChart3,
-  Users,
-  ArrowLeft,
-  Tag,
-  FolderTree,
-  Building2,
-  ClipboardList,
-  LogOut
-} from "lucide-react";
+import {Package, ShoppingBag, BarChart3, Users, ArrowLeft, Tag, FolderTree, Building2, ClipboardList, LogOut} from "lucide-react";
 import {useLanguage} from "@/contexts/LanguageContext.tsx";
+import {LanguageToggle} from "@/components/LanguageToggle.tsx";
+import {ThemeToggle} from "@/components/ThemeToggle.tsx";
 
 
 
@@ -31,19 +22,22 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-12">
+      <div className="container mx-auto px-4 pb-12 pt-5">
         <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold mb-2">Admin Dashboard</h1>
-            <p className="text-muted-foreground">Manage your Kewi store</p>
+          <div className={`flex-column gap-5`}>
+            <Link to="/" className={`flex mb-5`}>
+              <Button variant="outline">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Store
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-4xl font-bold mb-2">Admin Dashboard</h1>
+              <p className="text-muted-foreground">Manage your Kewi store</p>
+            </div>
           </div>
           <div className={`flex gap-3`}>
-            {/*<Link to="/">*/}
-            {/*  <Button variant="outline">*/}
-            {/*    <ArrowLeft className="mr-2 h-4 w-4" />*/}
-            {/*    Back to Store*/}
-            {/*  </Button>*/}
-            {/*</Link>*/}
+            <ThemeToggle />
             <Button variant="outline" size="sm" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-1" />
               {language === "ar" ? "تسجيل الخروج" : "Logout"}
