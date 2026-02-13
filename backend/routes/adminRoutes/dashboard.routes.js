@@ -1,8 +1,8 @@
 import express from 'express';
-import {adminDashboard} from "../../controllers/adminDash.controller.js";
-import {checkAuth} from "../../middleware/checkAuth.js";
+import {getAdminDashboardStats} from "../../controllers/adminDash.controller.js";
+import {requireAuth} from "../../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.get("/dashboard", checkAuth, adminDashboard);
+router.get("/dashboard-stats", requireAuth, getAdminDashboardStats);
 export default router;

@@ -110,8 +110,8 @@ const AdminWholesaler = () => {
               Users
               {hasBirthdayToday && (
                   <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-500 text-white">
-                🎂 Birthday Today
-              </span>
+                    🎂 Birthday Today
+                  </span>
               )}
             </button>
 
@@ -190,26 +190,26 @@ const AdminWholesaler = () => {
                                       : "-"}
                                   {isBirthday && (
                                       <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-500 text-white">
-                              🎂 Today
-                            </span>
+                                        🎂 Today
+                                      </span>
                                   )}
                                 </TableCell>
                             )}
 
                             <TableCell>
-                              {item.totalOrders ? item.totalOrders : 0}
+                              {item.orderHistory.length > 0 ? item.orderHistory.length : 0}
                             </TableCell>
 
                             <TableCell>
-                        <span
-                            className={`px-2 py-1 rounded-full text-xs ${
-                                item.status === "Active"
-                                    ? "bg-primary/10 text-primary"
-                                    : "bg-muted text-muted-foreground"
-                            }`}
-                        >
-                          {item.status || "Active"}
-                        </span>
+                              <span
+                                  className={`px-2 py-1 rounded-full text-xs ${
+                                      item.status === "Active"
+                                          ? "bg-primary/10 text-primary"
+                                          : "bg-muted text-muted-foreground"
+                                  }`}
+                              >
+                                {item.status || "Active"}
+                              </span>
                             </TableCell>
 
                             <TableCell>

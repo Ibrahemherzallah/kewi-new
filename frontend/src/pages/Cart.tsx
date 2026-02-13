@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { getProductPrice } from "@/lib/pricing";
 
 interface CartItem {
   id?: string;
@@ -50,6 +51,9 @@ interface City {
 const Cart = () => {
   const { t, language } = useLanguage();
   const { toast } = useToast();
+  const getPricesForItem = (item: CartItem) => {
+    return getProductPrice(item, language);
+  };
   const { points, getDiscount, redeemFreeProduct, canRedeemFreeProduct, spendPoints } = useLoyalty();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -116,28 +120,7 @@ const Cart = () => {
   };
 
   // unified price logic
-  const getPricesForItem = (item: CartItem) => {
-    const customer = item.customerPrice ?? item.retailPrice ?? item.costPrice ?? 0;
-    const wholesale = item.wholesalerPrice ?? item.wholesalePrice ?? customer;
-    const sale = item.salePrice ?? null;
-    const isOnSale = !!item.isOnSale;
 
-    let mainPrice = customer;
-    let oldPrice: number | null = null;
-
-    if (isWholesalerUser) {
-      mainPrice = wholesale;
-      oldPrice = customer;
-    } else if (isOnSale && sale != null) {
-      mainPrice = sale;
-      oldPrice = customer;
-    } else {
-      mainPrice = customer;
-      oldPrice = null;
-    }
-
-    return { mainPrice, oldPrice };
-  };
   const [confirmDiscountOpen, setConfirmDiscountOpen] = useState(false);
 
   // ---------- LOAD CART ----------
@@ -708,8 +691,8 @@ const Cart = () => {
                             <div className="flex items-center gap-2 mb-2">
                               <Star className="h-5 w-5 text-primary" />
                               <span className="font-semibold">
-                        {language === "ar" ? "نقاط الولاء" : "Loyalty Points"}
-                      </span>
+                                {language === "ar" ? "نقاط الولاء" : "Loyalty Points"}
+                              </span>
                               <Badge variant="secondary">{points} pts</Badge>
                             </div>
 
@@ -730,10 +713,7 @@ const Cart = () => {
                                         ? "اختر منتج مجاني (100 نقطة)"
                                         : "Choose a free product (100 pts)"}
                                   </p>
-                                  <RadioGroup
-                                      value={freeProductId || ""}
-                                      onValueChange={handleSelectFreeProduct}
-                                  >
+                                  <RadioGroup value={freeProductId || ""} onValueChange={handleSelectFreeProduct}>
                                     {cart.map((item) => {
                                       const id = getItemId(item);
                                       const { mainPrice } = getPricesForItem(item);

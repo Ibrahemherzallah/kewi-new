@@ -1,23 +1,23 @@
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Facebook, Instagram, Twitter, Mail, Phone, MapPin } from "lucide-react";
+import { Facebook, Instagram, Mail, Phone, MapPin } from "lucide-react";
+import { SiTiktok } from "react-icons/si";
+
 
 export const Footer = () => {
   const { t, language } = useLanguage();
 
   const footerLinks = {
     shop: [
-      { name: { en: 'Handbags', ar: 'حقائب اليد' }, path: '/products' },
-      { name: { en: 'Backpacks', ar: 'حقائب الظهر' }, path: '/products' },
-      { name: { en: 'Travel Bags', ar: 'حقائب السفر' }, path: '/products' },
-      { name: { en: 'Perfumes', ar: 'العطور' }, path: '/products' },
-      { name: { en: 'Accessories', ar: 'الإكسسوارات' }, path: '/products' },
+      { name: { en: 'Handbags', ar: 'حقائب اليد' }, path: '/category/67fd7361d3d9f99f95edff41' },
+      { name: { en: 'Travel Bags', ar: 'حقائب السفر' }, path: '/category/680fd54f4dde5779298c2701' },
+      { name: { en: 'Perfumes', ar: 'العطور' }, path: '/category/6803f9c535efe305218f99f2' },
+      { name: { en: 'Accessories', ar: 'الإكسسوارات' }, path: '/category/67ff75611520f910df910f88' },
     ],
     company: [
       { name: { en: 'About Us', ar: 'من نحن' }, path: '/about' },
-      { name: { en: 'Contact', ar: 'اتصل بنا' }, path: '/contact' },
-      { name: { en: 'Privacy Policy', ar: 'سياسة الخصوصية' }, path: '/privacy' },
-      { name: { en: 'Terms of Service', ar: 'شروط الخدمة' }, path: '/terms' },
+      { name: { en: 'Delivery Terms', ar: 'شروط التوصيل' }, path: '/delivery-terms' },
+      { name: { en: 'Contact', ar: 'اتصل بنا' }, path: 'https://wa.me/972599128813' },
     ],
   };
 
@@ -36,14 +36,14 @@ export const Footer = () => {
                 : 'وجهتك الموثوقة للحقائب الفاخرة وحقائب السفر والإكسسوارات.'}
             </p>
             <div className="flex gap-4">
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+              <a href="https://www.facebook.com/kewi.jenin" className="text-muted-foreground hover:text-primary transition-colors">
                 <Facebook className="h-5 w-5" />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+              <a href="https://www.instagram.com/kewi.jenin" className="text-muted-foreground hover:text-primary transition-colors">
                 <Instagram className="h-5 w-5" />
               </a>
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                <Twitter className="h-5 w-5" />
+              <a href="https://www.tiktok.com/@kewi.ps" className="text-muted-foreground hover:text-primary transition-colors">
+                <SiTiktok className="h-5 w-5" />
               </a>
             </div>
           </div>
@@ -56,10 +56,7 @@ export const Footer = () => {
             <ul className="space-y-2">
               {footerLinks.shop.map((link, index) => (
                 <li key={index}>
-                  <Link 
-                    to={link.path} 
-                    className="text-muted-foreground hover:text-primary transition-colors text-sm"
-                  >
+                  <Link to={link.path} className="text-muted-foreground hover:text-primary transition-colors text-sm">
                     {link.name[language]}
                   </Link>
                 </li>
@@ -75,10 +72,7 @@ export const Footer = () => {
             <ul className="space-y-2">
               {footerLinks.company.map((link, index) => (
                 <li key={index}>
-                  <Link 
-                    to={link.path} 
-                    className="text-muted-foreground hover:text-primary transition-colors text-sm"
-                  >
+                  <Link to={link.path} className="text-muted-foreground hover:text-primary transition-colors text-sm">
                     {link.name[language]}
                   </Link>
                 </li>
@@ -98,7 +92,7 @@ export const Footer = () => {
               </li>
               <li className="flex items-center gap-2 text-muted-foreground text-sm">
                 <Phone className="h-4 w-4" />
-                <span>+972 123 456 789</span>
+                <span>+972599128813</span>
               </li>
               <li className="flex items-center gap-2 text-muted-foreground text-sm">
                 <MapPin className="h-4 w-4" />

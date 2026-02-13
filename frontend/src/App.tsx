@@ -28,6 +28,7 @@ import CategoryProducts from "@/pages/CategoryProducts.tsx";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import SignUp from "./pages/SignUp";
 import Profile from "./pages/Profile";
+import DeliveryTerms from "@/pages/DeliveryTerms.tsx";
 const queryClient = new QueryClient();
 
 // Language, theme, loyalty, and favorites providers configured
@@ -69,7 +70,7 @@ const App = () => (
                         }
                     />
                     <Route path="/category/:categoryId" element={<CategoryProducts />} />
-
+                    <Route path="/delivery-terms" element={<DeliveryTerms />} />
                     {/* Admin-only routes */}
                     <Route
                         path="/admin"

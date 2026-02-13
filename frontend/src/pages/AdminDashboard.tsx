@@ -5,13 +5,22 @@ import {Package, ShoppingBag, BarChart3, Users, ArrowLeft, Tag, FolderTree, Buil
 import {useLanguage} from "@/contexts/LanguageContext.tsx";
 import {LanguageToggle} from "@/components/LanguageToggle.tsx";
 import {ThemeToggle} from "@/components/ThemeToggle.tsx";
-
+import { useEffect, useState } from "react";
+import axios from "axios";
 
 
 const AdminDashboard = () => {
 
   const navigate = useNavigate();
   const { language } = useLanguage();
+  const token = localStorage.getItem("token");
+
+  const [stats, setStats] = useState({
+    totalProducts: 0,
+    pendingOrders: 0,
+    monthlyRevenue: 0,
+    wholesalers: 0,
+  });
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -19,7 +28,25 @@ const AdminDashboard = () => {
     localStorage.removeItem("user");
     navigate("/");
   };
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await axios.get(
+            "http://localhost:5001/admin/dashboard-stats",
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+        );
+        setStats(res.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
 
+    fetchStats();
+  }, []);
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 pb-12 pt-5">
@@ -52,7 +79,7 @@ const AdminDashboard = () => {
               <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
                 <Package className="h-6 w-6 text-primary" />
               </div>
-              <span className="text-2xl font-bold">156</span>
+              <span className="text-2xl font-bold">{stats.totalProducts}</span>
             </div>
             <div className="text-sm text-muted-foreground">Total Products</div>
           </Card>
@@ -62,7 +89,7 @@ const AdminDashboard = () => {
               <div className="w-12 h-12 bg-secondary/10 rounded-xl flex items-center justify-center">
                 <ShoppingBag className="h-6 w-6 text-secondary" />
               </div>
-              <span className="text-2xl font-bold">43</span>
+              <span className="text-2xl font-bold">{stats.pendingOrders}</span>
             </div>
             <div className="text-sm text-muted-foreground">Pending Orders</div>
           </Card>
@@ -72,7 +99,7 @@ const AdminDashboard = () => {
               <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center">
                 <BarChart3 className="h-6 w-6 text-accent" />
               </div>
-              <span className="text-2xl font-bold">$12.5K</span>
+              <span className="text-2xl font-bold">${stats.monthlyRevenue}</span>
             </div>
             <div className="text-sm text-muted-foreground">Monthly Revenue</div>
           </Card>
@@ -82,7 +109,7 @@ const AdminDashboard = () => {
               <div className="w-12 h-12 bg-warning/10 rounded-xl flex items-center justify-center">
                 <Users className="h-6 w-6 text-warning" />
               </div>
-              <span className="text-2xl font-bold">28</span>
+              <span className="text-2xl font-bold">{stats.wholesalers}</span>
             </div>
             <div className="text-sm text-muted-foreground">Wholesalers</div>
           </Card>
