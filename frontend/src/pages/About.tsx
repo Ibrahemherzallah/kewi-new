@@ -23,7 +23,7 @@ const About = () => {
         <div className="container mx-auto px-4 py-24 relative">
           <div className="max-w-3xl mx-auto text-center space-y-6 animate-fade-in">
             <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-              {t('about.title') || (language === 'ar' ? 'من نحن' : 'About Us')}
+              {(language === 'ar' ? 'من نحن' : 'About Us')}
             </h1>
             <p className="text-xl text-muted-foreground">
               {language === 'ar' 

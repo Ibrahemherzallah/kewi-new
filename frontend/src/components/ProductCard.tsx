@@ -21,7 +21,30 @@ export const ProductCard = ({product, showWholesale = false, onAddToCart,}: Prod
     // id to use for URL / favorites
     const productId: string = product.id || (product as any)._id || "";
     const mongoId = product._id;
+// ---------- BIRTHDAY CHECK ----------
+    const getIsBirthdayToday = (): boolean => {
+        if (typeof window === "undefined") return false;
 
+        const userRaw = localStorage.getItem("user");
+        if (!userRaw) return false;
+
+        try {
+            const user = JSON.parse(userRaw);
+            if (!user.dob) return false;
+
+            const dob = new Date(user.dob);
+            const today = new Date();
+
+            return (
+                dob.getDate() === today.getDate() &&
+                dob.getMonth() === today.getMonth()
+            );
+        } catch {
+            return false;
+        }
+    };
+
+    const isBirthdayToday = getIsBirthdayToday();
     // images: support both `images` and `image`
     const rawImages = product.images ?? product.image ?? [];
     const images: string[] = Array.isArray(rawImages)
@@ -56,11 +79,9 @@ export const ProductCard = ({product, showWholesale = false, onAddToCart,}: Prod
     };
 
     // PRICES (based on your data fields)
-    const customerPrice: number =
-        product.customerPrice ?? product.retailPrice ?? product.costPrice ?? 0;
+    const customerPrice: number = product.customerPrice ?? product.retailPrice ?? product.costPrice ?? 0;
 
-    const wholesalerPrice: number =
-        product.wholesalerPrice ?? product.wholesalePrice ?? customerPrice;
+    const wholesalerPrice: number = product.wholesalerPrice ?? product.wholesalePrice ?? customerPrice;
 
     const salePrice: number | null = product.salePrice ?? null;
 
@@ -75,15 +96,13 @@ export const ProductCard = ({product, showWholesale = false, onAddToCart,}: Prod
     const badgeAr = product?.isSoldOut
         ? "نفذ"
         : product?.isOnSale
-            ? "معروض للبيع"
+            ? "سعر العرض"
             : product?.isSoon
                 ? "قريباً"
                 : "متوفر";
 
     // stock: either stockNumber or warehouse+kewi
-    const totalStock: number =
-        product.stockNumber ??
-        (product.warehouseQty ?? 0) + (product.kewiQty ?? 0);
+    const totalStock: number = product.stockNumber ?? (product.warehouseQty ?? 0) + (product.kewiQty ?? 0);
 
     const isOnSale: boolean = Boolean(product.isOnSale);
     const isSoldOut: boolean = Boolean(product.isSoldOut) || totalStock <= 0;
@@ -98,34 +117,49 @@ export const ProductCard = ({product, showWholesale = false, onAddToCart,}: Prod
     const description = getDescription();
 
     // ---------- USER ROLE (wholesaler or not) ----------
-    const role =
-        typeof window !== "undefined"
-            ? localStorage.getItem("userRole")
-            : null;
+    const role = typeof window !== "undefined" ? localStorage.getItem("userRole") : null;
     const isWholesalerUser = role === "wholesaler";
 
-    // ---------- PRICE DISPLAY LOGIC ----------
+    // ---------- PRICE DISPLAY LOGIC (FINAL) ----------
     let mainPrice = customerPrice;
     let secondaryPrice: number | null = null;
     let mainLabel: string | null = null;
 
-    if (isWholesalerUser) {
-        // wholesaler user: show wholesale clear, customer with line-through
+// 🎂 Birthday rule has TOP priority
+    if (isBirthdayToday) {
+        if (salePrice != null && salePrice != 0) {
+            // show sale price if exists
+            mainPrice = salePrice;
+            secondaryPrice = customerPrice;
+            mainLabel = language === "ar" ? "خصم عيد الميلاد 🎉" : "Birthday Offer 🎉";
+        } else {
+            // if no sale, give him wholesale price as gift
+            mainPrice = wholesalerPrice;
+            secondaryPrice = customerPrice;
+            mainLabel = language === "ar" ? "هدية عيد الميلاد 🎁" : "Birthday Gift 🎁";
+        }
+    }
+
+// 🏷️ Wholesaler rule (if not birthday)
+    else if (isWholesalerUser) {
         mainPrice = wholesalerPrice;
         secondaryPrice = customerPrice;
         mainLabel = language === "ar" ? "سعر الجملة" : "Wholesale";
-    } else if (isOnSale && salePrice != null) {
-        // normal user, product on sale
+    }
+
+// 🔥 Normal sale rule
+    else if (isOnSale && salePrice != null) {
         mainPrice = salePrice;
         secondaryPrice = customerPrice;
         mainLabel = language === "ar" ? "سعر العرض" : "Sale price";
-    } else {
-        // normal price
+    }
+
+// 💰 Normal price
+    else {
         mainPrice = customerPrice;
         secondaryPrice = null;
         mainLabel = null;
     }
-
     const isFav = isFavorite(mongoId);
 
     const handleFavoriteClick = (e: React.MouseEvent) => {

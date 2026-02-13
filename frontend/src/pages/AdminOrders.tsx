@@ -60,6 +60,178 @@ const AdminOrders = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { language } = useLanguage();
 
+    const handlePrintInvoice = (order: Purchase) => {
+        const printWindow = window.open("", "_blank", "width=800,height=900");
+        if (!printWindow) return;
+
+        const dir = language === "ar" ? "rtl" : "ltr";
+        const textAlign = language === "ar" ? "right" : "left";
+
+        const createdDate = new Date(order.createdAt).toLocaleString("en-GB", {
+            dateStyle: "short",
+            timeStyle: "short",
+        });
+
+        const html = `
+    <html lang="${language}" dir="${dir}">
+      <head>
+        <title>Invoice - ${order._id}</title>
+        <style>
+          body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            margin: 32px;
+            direction: ${dir};
+            text-align: ${textAlign};
+          }
+          .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+          }
+          .store-name {
+            font-size: 22px;
+            font-weight: 700;
+          }
+          .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 16px 0 8px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+          }
+          th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            font-size: 13px;
+          }
+          th {
+            background-color: #f5f5f5;
+          }
+          .totals {
+            margin-top: 16px;
+            display: flex;
+            justify-content: flex-end;
+          }
+          .totals-table {
+            width: 280px;
+            border-collapse: collapse;
+          }
+          .totals-table td {
+            border: 1px solid #ddd;
+            padding: 6px 8px;
+            font-size: 14px;
+          }
+          .totals-table tr:last-child td {
+            font-weight: 700;
+          }
+          .small {
+            font-size: 12px;
+            color: #666;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="store-name">
+              ${language === "ar" ? "فاتورة الطلب" : "Order Invoice"}
+            </div>
+            <div class="small">
+              ${language === "ar" ? "رقم الطلب" : "Order ID"}: ${order._id}<br/>
+              ${language === "ar" ? "التاريخ" : "Date"}: ${createdDate}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-title">
+            ${language === "ar" ? "معلومات الزبون" : "Customer Information"}
+          </div>
+          <div class="small">
+            ${language === "ar" ? "الاسم" : "Name"}: ${order.fullName}<br/>
+            ${language === "ar" ? "الهاتف" : "Phone"}: ${order.phoneNumber}<br/>
+            ${language === "ar" ? "المدينة" : "City"}: ${order.city}<br/>
+            ${language === "ar" ? "العنوان" : "Address"}: ${order.streetAddress || "-"}<br/>
+            ${language === "ar" ? "نوع التوصيل" : "Delivery type"}: ${order.deliveryType || "-"}
+          </div>
+        </div>
+
+        <div>
+          <div class="section-title">
+            ${language === "ar" ? "المنتجات" : "Products"}
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>${language === "ar" ? "المنتج" : "Product"}</th>
+                <th>${language === "ar" ? "اللون" : "Color"}</th>
+                <th>${language === "ar" ? "الكمية" : "Qty"}</th>
+                <th>${language === "ar" ? "سعر القطعة" : "Unit price"}</th>
+                <th>${language === "ar" ? "الإجمالي" : "Total"}</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${order.products
+            .map((p) => {
+                const lineTotal = (p.price || 0) * p.quantity;
+                return `
+                    <tr>
+                      <td>${p.name || p.id || ""}</td>
+                      <td>${p.color || "-"}</td>
+                      <td>${p.quantity}</td>
+                      <td>${(p.price || 0).toFixed(2)} ₪</td>
+                      <td>${lineTotal.toFixed(2)} ₪</td>
+                    </tr>
+                  `;
+            })
+            .join("")}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="totals">
+          <table class="totals-table">
+            <tr>
+              <td>${language === "ar" ? "المجموع" : "Subtotal"}</td>
+              <td>${order.totalPrice.toFixed(2)} ₪</td>
+            </tr>
+            <tr>
+              <td>${language === "ar" ? "خصم" : "Discount"}</td>
+              <td>${order.discount ? (language === "ar" ? "نعم" : "Yes") : (language === "ar" ? "لا" : "No")}</td>
+            </tr>
+            <tr>
+              <td>${language === "ar" ? "الإجمالي النهائي" : "Final total"}</td>
+              <td>${order.totalPrice.toFixed(2)} ₪</td>
+            </tr>
+          </table>
+        </div>
+
+        <p class="small" style="margin-top:24px;">
+          ${language === "ar"
+            ? "شكراً لتسوقكم معنا."
+            : "Thank you for shopping with us."}
+        </p>
+
+        <script>
+          window.onload = function () {
+            window.focus();
+            window.print();
+            // Uncomment if you *want* it to auto-close after printing:
+            // window.close();
+          };
+        <\/script>
+      </body>
+    </html>
+  `;
+
+        printWindow.document.open();
+        printWindow.document.write(html);
+        printWindow.document.close();
+    };
   const openOrderDrawer = (order: Purchase) => {
     setSelectedOrder(order);
     setDrawerOpen(true);
@@ -382,8 +554,19 @@ const AdminOrders = () => {
                   </div>
 
                   <DrawerFooter>
+                    {selectedOrder && (
+                        <Button
+                            onClick={() => handlePrintInvoice(selectedOrder)}
+                            className="w-full sm:w-auto"
+                        >
+                          {language === "ar" ? "طباعة الفاتورة" : "Print invoice"}
+                        </Button>
+                    )}
+
                     <DrawerClose asChild>
-                      <Button variant="outline">Close</Button>
+                      <Button variant="outline" className="w-full sm:w-auto">
+                        {language === "ar" ? "إغلاق" : "Close"}
+                      </Button>
                     </DrawerClose>
                   </DrawerFooter>
                 </>

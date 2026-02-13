@@ -1,5 +1,3 @@
-// src/pages/Products.tsx
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
@@ -8,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001";
 const PRODUCTS_API = `${API_BASE}/admin/products`;
@@ -57,11 +56,12 @@ const Products = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-
+  const [visibleCount, setVisibleCount] = useState(32);
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sortType, setSortType] = useState<"random" | "newest" | "oldest">("random");
 
   // ---- helpers for localization ----
   const getLocalizedName = (p: ApiProduct): string => {
@@ -93,21 +93,32 @@ const Products = () => {
         setLoading(true);
         setError(null);
 
-        const [prodRes, catRes] = await Promise.all([
-          fetch(PRODUCTS_API),
-          fetch(CATEGORIES_API),
-        ]);
+        const cache = localStorage.getItem("products_cache");
+        const cacheTime = localStorage.getItem("products_cache_time");
 
-        if (!prodRes.ok) throw new Error("Failed to fetch products");
-        const productsData: ApiProduct[] = await prodRes.json();
+        let productsData: ApiProduct[] = [];
+
+        // ✅ Use cache for products if valid
+        if (cache && cacheTime && Date.now() - Number(cacheTime) < 10 * 60 * 1000) {
+          productsData = JSON.parse(cache);
+        } else {
+          const prodRes = await fetch(PRODUCTS_API);
+          productsData = await prodRes.json();
+
+          localStorage.setItem("products_cache", JSON.stringify(productsData));
+          localStorage.setItem("products_cache_time", Date.now().toString());
+        }
+
         setProducts(productsData);
 
+        // ✅ ALWAYS fetch categories (never cache them)
+        const catRes = await fetch(CATEGORIES_API);
         if (catRes.ok) {
           const categoriesData: Category[] = await catRes.json();
           setCategories(categoriesData);
         }
+
       } catch (err: any) {
-        console.error(err);
         setError(err.message || "Error loading products");
       } finally {
         setLoading(false);
@@ -117,8 +128,49 @@ const Products = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    const onScroll = () => {
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 300) {
+        setVisibleCount((prev) => prev + 8);
+      }
+    };
+
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [])
+
+  console.log("TTTTTTTTTTT sortType is : ", sortType)
+  const sortProducts = (list: ApiProduct[]) => {
+    const arr = [...list];
+
+    if (sortType === "random") {
+      console.log("TTTTTTTTTTT ENTER random")
+      return arr.sort(() => Math.random() - 0.5);
+    }
+
+    if (sortType === "latest") {
+      console.log("TTTTTTTTTTT ENTER latest")
+      return arr.sort(
+          (a, b) =>
+              new Date((b as any).createdAt || 0).getTime() -
+              new Date((a as any).createdAt || 0).getTime()
+      );
+    }
+
+    if (sortType === "oldest") {
+      console.log("TTTTTTTTTTT ENTER oldest")
+      return arr.sort(
+          (a, b) =>
+              new Date((a as any).createdAt || 0).getTime() -
+              new Date((b as any).createdAt || 0).getTime()
+      );
+    }
+
+    return arr;
+  };
+
   // ---- filter products by search + (optional) selectedCategoryId ----
-  const filteredProducts = products.filter((product) => {
+  const filteredProducts = sortProducts(products.filter((product) => {
     const q = searchQuery.toLowerCase();
 
     const name = getLocalizedName(product).toLowerCase();
@@ -136,7 +188,7 @@ const Products = () => {
                 : product.categoryId === selectedCategoryId;
 
     return matchesSearch && matchesCategory;
-  });
+  }));
   const getProductName = (product: BackendProduct, language: string) => {
     if (!product.name) return language === "ar" ? "منتج بدون اسم" : "Unnamed product";
     if (typeof product.name === "string") return product.name;
@@ -262,23 +314,52 @@ const Products = () => {
             </div>
           </div>
 
-          {/* Search + heading */}
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold mb-4">
-              {language === "ar" ? "جميع المنتجات" : "All Products"}
-            </h1>
-            <div className="relative max-w-md">
+          {/* 🔎 Search + Sort */}
+          <div className="mb-8 flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
+
+            {/* 🔍 Search */}
+            <div className="relative w-full md:max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                   type="text"
                   placeholder={
-                    language === "ar" ? "ابحث عن منتجات..." : "Search products..."
+                    language === "ar"
+                        ? "ابحث في المنتجات..."
+                        : "Search products..."
                   }
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 h-11"
               />
             </div>
+
+            {/* 🔽 Order Filter */}
+            <div className="w-full md:w-56">
+              <Select
+                  value={sortType}
+                  onValueChange={(value) => setSortType(value)}
+              >
+                <SelectTrigger className="h-11">
+                  <SelectValue
+                      placeholder={
+                        language === "ar" ? "ترتيب المنتجات" : "Sort products"
+                      }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="random">
+                    {language === "ar" ? "عشوائي" : "Random"}
+                  </SelectItem>
+                  <SelectItem value="latest">
+                    {language === "ar" ? "الأحدث" : "Newest"}
+                  </SelectItem>
+                  <SelectItem value="oldest">
+                    {language === "ar" ? "الأقدم" : "Oldest"}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
           </div>
 
           {error && (
@@ -298,8 +379,9 @@ const Products = () => {
                 </p>
               </div>
           ) : (
+
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredProducts.map((product) => (
+                {filteredProducts.slice(0, visibleCount).map((product) => (
                     <ProductCard
                         key={product._id}
                         product={product as any}
