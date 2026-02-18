@@ -2,16 +2,44 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Package, Users, Award, Target } from "lucide-react";
+import {useEffect, useState} from "react";
+import axios from "axios";
 
 const About = () => {
   const { t, language } = useLanguage();
-
+  const token = localStorage.getItem("token");
+  const [statss, setStats] = useState({
+    totalProducts: 0,
+    pendingOrders: 0,
+    monthlyRevenue: 0,
+    wholesalers: 0,
+  });
   const stats = [
-    { icon: Package, label: { en: "Products", ar: "منتجات" }, value: "500+" },
+    { icon: Package, label: { en: "Products", ar: "منتجات" }, value: `${statss.totalProducts}+`},
     { icon: Users, label: { en: "Happy Customers", ar: "عملاء سعداء" }, value: "10K+" },
-    { icon: Award, label: { en: "Years Experience", ar: "سنوات خبرة" }, value: "15+" },
-    { icon: Target, label: { en: "Countries", ar: "دول" }, value: "25+" },
+    { icon: Award, label: { en: "Years Experience", ar: "سنوات خبرة" }, value: "12+" },
+    { icon: Target, label: { en: "City", ar: "مدينة وقرية" }, value: "40+" },
   ];
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await axios.get(
+            "http://localhost:5001/admin/dashboard-stats",
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+        );
+        setStats(res.data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchStats();
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">

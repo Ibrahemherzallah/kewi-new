@@ -22,13 +22,12 @@ export const getMe = async (req, res) => {
 
 export const updateMe = async (req, res) => {
     try {
-        const { username, phone, address, dob } = req.body;
+        const { username, phone, address } = req.body;
 
         const update = {};
 
         if (username !== undefined) update.userName = username;
         if (address !== undefined) update.address = address;
-        if (dob !== undefined) update.dob = dob;
 
         if (phone !== undefined) {
             // keep phone unique
@@ -55,7 +54,6 @@ export const updateMe = async (req, res) => {
                 username: user.userName,
                 phone: user.phone,
                 address: user.address,
-                dob: user.dob,
                 role: user.role,
             },
         });

@@ -7,14 +7,9 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
-
+import {Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious,} from "@/components/ui/carousel";
+import { Gift } from "lucide-react";
+import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,} from "@/components/ui/dialog";
 // 🔹 API base
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001";
 const CATEGORIES_API = `${API_BASE}/admin/categories`;
@@ -71,7 +66,35 @@ const Home = () => {
   const [categories, setCategories] = useState<BackendCategory[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<BackendProduct[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showBirthdayPopup, setShowBirthdayPopup] = useState(false);
 
+  const isBirthdayToday = (): boolean => {
+    if (typeof window === "undefined") return false;
+
+    const userRaw = localStorage.getItem("user");
+    if (!userRaw) return false;
+
+    try {
+      const user = JSON.parse(userRaw);
+      if (!user?.dob) return false;
+
+      const dob = new Date(user.dob);
+      if (Number.isNaN(dob.getTime())) return false;
+
+      const today = new Date();
+      return dob.getDate() === today.getDate() && dob.getMonth() === today.getMonth();
+    } catch {
+      return false;
+    }
+  };
+
+  const getTodayKey = () => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
   // 🔹 Fetch categories + products
   useEffect(() => {
     const loadData = async () => {
@@ -106,6 +129,16 @@ const Home = () => {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (!isBirthdayToday()) return;
+
+    const key = `birthday_popup_shown_${getTodayKey()}`;
+    const alreadyShown = localStorage.getItem(key) === "1";
+    if (alreadyShown) return;
+
+    localStorage.setItem(key, "1");
+    setShowBirthdayPopup(true);
+  }, []);
 
 // helper to get localized name from backend product
   const getProductName = (product: BackendProduct, language: string) => {
@@ -296,6 +329,27 @@ const Home = () => {
         </section>
 
         <Footer />
+        <Dialog open={showBirthdayPopup} onOpenChange={setShowBirthdayPopup}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle dir={language === "ar" ? 'rtl' :'ltr'} className="flex items-center gap-2">
+                <Gift className="h-5 w-5 text-primary" />
+                {language === "ar" ? "كل عام وأنت بخير! 🎉" : "Happy Birthday! 🎉"}
+              </DialogTitle>
+              <DialogDescription style={{ textAlign: language === "ar" ? "start" : "end" }}>
+                {language === "ar"
+                    ? "لدينا هدية خاصة لك اليوم 🎁 تصفّح المنتجات وشاهد سعر عيد الميلاد."
+                    : "We’ve got a special gift for you today 🎁 Browse products to see your birthday price."}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-2 text-sm text-muted-foreground">
+              {language === "ar"
+                  ? "ملاحظة: تظهر هذه الرسالة مرة واحدة فقط اليوم."
+                  : "Note: This message shows only once today."}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
   );
 };

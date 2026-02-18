@@ -27,7 +27,7 @@ export const AddWholesalerDialog = () => {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
+  const [nameSearch, setNameSearch] = useState("");
   const [formData, setFormData] = useState({
     userName: "",
     password: "",
@@ -129,7 +129,17 @@ export const AddWholesalerDialog = () => {
       setSubmitting(false);
     }
   };
-  console.log("nameOptions is : ", nameOptions)
+
+  const normalized = (s: string) => s.trim().toLowerCase();
+
+  const filteredNameOptions = nameOptions.filter((n) =>
+      normalized(n).includes(normalized(nameSearch))
+  );
+
+  const canCreateNew =
+      nameSearch.trim().length > 0 &&
+      !nameOptions.some((n) => normalized(n) === normalized(nameSearch));
+
   return (
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
@@ -164,18 +174,30 @@ export const AddWholesalerDialog = () => {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[280px] p-0">
-                  <Command>
-                    <CommandInput placeholder="Search username..." />
+                  <Command
+                      onKeyDown={(e: any) => {
+                        if (e.key === "Enter" && canCreateNew) {
+                          e.preventDefault();
+                          const newName = nameSearch.trim();
+                          setFormData({ ...formData, userName: newName });
+                          setNamePopoverOpen(false);
+                          setNameSearch("");
+                        }
+                      }}
+                  >
+                    <CommandInput placeholder="Search or type a new username..." value={nameSearch} onValueChange={setNameSearch}/>
                     <CommandList>
                       <CommandEmpty>No usernames found.</CommandEmpty>
-                      <CommandGroup>
-                        {nameOptions.map((name) => (
+
+                      <CommandGroup heading="Results">
+                        {filteredNameOptions.map((name) => (
                             <CommandItem
                                 key={name}
                                 value={name}
                                 onSelect={(currentValue) => {
                                   setFormData({ ...formData, userName: currentValue });
                                   setNamePopoverOpen(false);
+                                  setNameSearch(""); // optional: clear
                                 }}
                             >
                               <Check
@@ -188,6 +210,23 @@ export const AddWholesalerDialog = () => {
                             </CommandItem>
                         ))}
                       </CommandGroup>
+
+                      {canCreateNew && (
+                          <CommandGroup heading="Create">
+                            <CommandItem
+                                value={nameSearch}
+                                onSelect={() => {
+                                  const newName = nameSearch.trim();
+                                  setFormData({ ...formData, userName: newName });
+                                  setNamePopoverOpen(false);
+                                  setNameSearch("");
+                                }}
+                            >
+                              <Plus className="mr-2 h-4 w-4" />
+                              Use "{nameSearch.trim()}"
+                            </CommandItem>
+                          </CommandGroup>
+                      )}
                     </CommandList>
                   </Command>
                 </PopoverContent>

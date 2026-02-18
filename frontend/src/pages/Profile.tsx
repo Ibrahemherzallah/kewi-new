@@ -20,7 +20,6 @@ interface UserData {
     phone: string;
     role: "admin" | "user" | "wholesaler" | string;
     address?: string;
-    dob?: string;
 }
 
 const Profile = () => {
@@ -33,7 +32,6 @@ const Profile = () => {
         username: "",
         phone: "",
         address: "",
-        dob: "",
     });
     const [saving, setSaving] = useState(false);
     const role = typeof window !== "undefined" ? localStorage.getItem("userRole") : null;
@@ -54,7 +52,6 @@ const Profile = () => {
                     username: parsed.username || "",
                     phone: parsed.phone || "",
                     address: parsed.address || "",
-                    dob: parsed.dob ? parsed.dob.substring(0, 10) : "",
                 });
             } catch {
                 // ignore
@@ -135,7 +132,6 @@ const Profile = () => {
                     username: editForm.username,
                     phone: editForm.phone,
                     address: editForm.address,
-                    dob: editForm.dob || null,
                 }),
             });
 
@@ -451,23 +447,6 @@ const Profile = () => {
                                             }
                                         />
                                     </div>
-                                    {
-                                        user?.role === 'user' && (
-                                            <div>
-                                                <label className="text-sm font-medium mb-1 block">
-                                                    {language === "ar" ? "تاريخ الميلاد" : "Date of birth"}
-                                                </label>
-                                                <Input
-                                                    type="date"
-                                                    value={editForm.dob}
-                                                    onChange={(e) =>
-                                                        setEditForm((f) => ({ ...f, dob: e.target.value }))
-                                                    }
-                                                />
-                                            </div>
-                                        )
-                                    }
-
 
                                     <Button type="submit" className="w-full" disabled={saving}>
                                         {saving

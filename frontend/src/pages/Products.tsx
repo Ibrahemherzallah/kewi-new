@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import {useEffect, useMemo, useRef, useState} from "react";
 import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { ProductCard } from "@/components/ProductCard";
@@ -53,7 +53,7 @@ const Products = () => {
   const { toast } = useToast();
   const { t,language } = useLanguage();
   const navigate = useNavigate();
-
+  const randomRankRef = useRef<Record<string, number>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(32);
@@ -140,16 +140,27 @@ const Products = () => {
   }, [])
 
   console.log("TTTTTTTTTTT sortType is : ", sortType)
+  const getRandomRank = (id: string) => {
+    if (randomRankRef.current[id] == null) {
+      randomRankRef.current[id] = Math.random();
+    }
+    return randomRankRef.current[id];
+  };
+
+
+
   const sortProducts = (list: ApiProduct[]) => {
     const arr = [...list];
 
     if (sortType === "random") {
-      console.log("TTTTTTTTTTT ENTER random")
-      return arr.sort(() => Math.random() - 0.5);
+      return arr.sort((a, b) => {
+        const aId = (a._id || a.id) as string;
+        const bId = (b._id || b.id) as string;
+        return getRandomRank(aId) - getRandomRank(bId);
+      });
     }
 
     if (sortType === "latest") {
-      console.log("TTTTTTTTTTT ENTER latest")
       return arr.sort(
           (a, b) =>
               new Date((b as any).createdAt || 0).getTime() -
@@ -158,7 +169,6 @@ const Products = () => {
     }
 
     if (sortType === "oldest") {
-      console.log("TTTTTTTTTTT ENTER oldest")
       return arr.sort(
           (a, b) =>
               new Date((a as any).createdAt || 0).getTime() -
@@ -170,25 +180,29 @@ const Products = () => {
   };
 
   // ---- filter products by search + (optional) selectedCategoryId ----
-  const filteredProducts = sortProducts(products.filter((product) => {
+  const filteredProducts = useMemo(() => {
     const q = searchQuery.toLowerCase();
 
-    const name = getLocalizedName(product).toLowerCase();
-    const desc = getLocalizedDescription(product).toLowerCase();
-    const internalId = (product.id || "").toLowerCase();
+    const filtered = products.filter((product) => {
+      const name = getLocalizedName(product).toLowerCase();
+      const desc = getLocalizedDescription(product).toLowerCase();
+      const internalId = (product.id || "").toLowerCase();
 
-    const matchesSearch =
-        name.includes(q) || desc.includes(q) || internalId.includes(q);
+      const matchesSearch =
+          name.includes(q) || desc.includes(q) || internalId.includes(q);
 
-    const matchesCategory =
-        !selectedCategoryId
-            ? true
-            : typeof product.categoryId === "object"
-                ? product.categoryId?._id === selectedCategoryId
-                : product.categoryId === selectedCategoryId;
+      const matchesCategory =
+          !selectedCategoryId
+              ? true
+              : typeof product.categoryId === "object"
+                  ? product.categoryId?._id === selectedCategoryId
+                  : product.categoryId === selectedCategoryId;
 
-    return matchesSearch && matchesCategory;
-  }));
+      return matchesSearch && matchesCategory;
+    });
+
+    return sortProducts(filtered);
+  }, [products, searchQuery, selectedCategoryId, sortType]);
   const getProductName = (product: BackendProduct, language: string) => {
     if (!product.name) return language === "ar" ? "منتج بدون اسم" : "Unnamed product";
     if (typeof product.name === "string") return product.name;
