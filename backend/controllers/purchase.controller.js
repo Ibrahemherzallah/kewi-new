@@ -1,7 +1,7 @@
 import Purchase from '../models/purchase.model.js';
 import Product from "../models/product.model.js";
 import User from "../models/users.model.js";
-
+import mongoose from "mongoose";
 import twilio from 'twilio';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -93,91 +93,138 @@ const calculatePointsFromPurchase = (amount) => {
     return Math.floor(amount / 50) * 2;
 };
 
-export const updateOrderStatus = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { action, role } = req.body; // 'confirm' | 'ship' | 'delivered'
 
-        const order = await Purchase.findById(id);
-        if (!order) {
-            return res.status(404).json({ message: "Order not found" });
+
+const deductStockForOrder = async (order, session) => {
+    for (const item of order.products) {
+        const qty = Number(item.quantity || 1);
+
+        const product = await Product.findById(item.productId).session(session);
+        if (!product) {
+            throw new Error(`Product not found: ${item.productId}`);
         }
 
-        let earnedPoints = 0;
-        let updated = false;
+        // ✅ Variant product
+        if (product.isMultiColor && Array.isArray(product.variants) && product.variants.length > 0) {
+            const color = (item.color || "").trim();
+            const variant = product.variants.find(v => (v.color || "").trim() === color);
 
-        if (action === "confirm") {
-            // admin confirmed with customer by phone
-            if (order.orderStatus === "ordered") {
+            if (!variant) {
+                throw new Error(`Variant not found for product ${product._id} (color: ${item.color})`);
+            }
+
+            if ((variant.stockNumber ?? 0) < qty) {
+                throw new Error(`Not enough stock for ${product.name} (${color})`);
+            }
+
+            variant.stockNumber -= qty;
+
+            // optional: mark sold out if that variant reached 0
+            // (if you want per-variant soldout you can add a field later)
+
+            await product.save({ session });
+        }
+
+        // ✅ Simple product
+        else {
+            if ((product.stockNumber ?? 0) < qty) {
+                throw new Error(`Not enough stock for ${product.name}`);
+            }
+
+            product.stockNumber -= qty;
+
+            // optional: auto mark sold out
+            product.isSoldOut = product.stockNumber <= 0;
+
+            await product.save({ session });
+        }
+    }
+};
+
+
+export const updateOrderStatus = async (req, res) => {
+    const session = await mongoose.startSession();
+
+    try {
+        const { id } = req.params;
+        const { action } = req.body;
+
+        let earnedPoints = 0;
+
+        await session.withTransaction(async () => {
+            const order = await Purchase.findById(id).session(session);
+            if (!order) {
+                return res.status(404).json({ message: "Order not found" });
+            }
+
+            let updated = false;
+
+            if (action === "confirm") {
+                if (order.orderStatus !== "ordered") {
+                    return res.status(400).json({ message: "Order status not changed (invalid state)" });
+                }
+
+                // ✅ deduct stock once
+                if (!order.stockDeducted) {
+                    await deductStockForOrder(order, session);
+                    order.stockDeducted = true;
+                }
+
                 order.orderStatus = "confirmed";
                 order.confirmedAt = new Date();
                 updated = true;
             }
-        } else if (action === "ship") {
-            // admin handed to delivery company
-            if (order.orderStatus === "ordered" || order.orderStatus === "confirmed") {
-                order.orderStatus = "shipped";
-                if (!order.confirmedAt) order.confirmedAt = new Date();
-                order.shippedAt = new Date();
-                updated = true;
-            }
-        } else if (action === "delivered") {
-            // user marks as received
-            if (order.orderStatus === "shipped" || order.orderStatus === "confirmed") {
-                // only give points first time it becomes delivered
-                const wasDeliveredBefore = order.orderStatus === "delivered";
 
-                order.orderStatus = "delivered";
-                order.deliveredAt = new Date();
-                updated = true;
-
-                if (!wasDeliveredBefore) {
-                    earnedPoints = calculatePointsFromPurchase(order.totalPrice);
-                    console.log("earnedPoints is : ", earnedPoints )
-                }
-            }
-        } else {
-            return res.status(400).json({ message: "Invalid action" });
-        }
-
-        if (!updated) {
-            return res
-                .status(400)
-                .json({ message: "Order status not changed (invalid state)" });
-        }
-
-        await order.save();
-
-        if(role === 'user'){
-            let totalPoints;
-
-            // If we earned points, update the user
-            if (earnedPoints > 0) {
-                const user = await User.findById(req.userId); // from auth middleware
-                if (user) {
-                    user.loyaltyPoints = (user.loyaltyPoints || 0) + earnedPoints;
-                    await user.save();
-                    totalPoints = user.loyaltyPoints;
+            else if (action === "ship") {
+                if (order.orderStatus === "ordered" || order.orderStatus === "confirmed") {
+                    order.orderStatus = "shipped";
+                    if (!order.confirmedAt) order.confirmedAt = new Date();
+                    order.shippedAt = new Date();
+                    updated = true;
                 }
             }
 
-            return res.json({
-                order,
-                earnedPoints,
-                totalPoints, // may be undefined if no points earned
-            });
-        }
-        return res.status(200).json({order})
+            else if (action === "delivered") {
+                if (order.orderStatus === "shipped" || order.orderStatus === "confirmed") {
+                    const wasDeliveredBefore = order.orderStatus === "delivered";
+
+                    order.orderStatus = "delivered";
+                    order.deliveredAt = new Date();
+                    updated = true;
+
+                    if (!wasDeliveredBefore) {
+                        earnedPoints = calculatePointsFromPurchase(order.totalPrice);
+                    }
+                }
+            }
+
+            else {
+                return res.status(400).json({ message: "Invalid action" });
+            }
+
+            if (!updated) {
+                return res.status(400).json({ message: "Order status not changed (invalid state)" });
+            }
+
+            await order.save({ session });
+
+            // ✅ IMPORTANT: do NOT trust role from req.body
+            // If you need user points update, determine role from token/db instead
+        });
+
+        // After transaction success, return fresh order
+        const updatedOrder = await Purchase.findById(id);
+        return res.status(200).json({ order: updatedOrder });
+
     } catch (error) {
         console.error("Error updating order status:", error);
-        res.status(500).json({
-            message: "Failed to update order status",
-            error: error.message,
+        return res.status(500).json({
+            message: error.message || "Failed to update order status",
         });
+    } finally {
+        session.endSession();
     }
-};
-
-// controllers/loyalty.controller.js
+};// controllers/loyalty.controller.js
 
 
 // already have this for percentage discount:

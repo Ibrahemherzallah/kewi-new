@@ -66,6 +66,10 @@ const purchaseSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  stockDeducted: {
+    type: Boolean,
+    default: false
+  }
 }, { timestamps: true });
 
 const Purchase = mongoose.model("Purchase", purchaseSchema);

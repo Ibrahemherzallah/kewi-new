@@ -176,6 +176,7 @@ const AdminProducts = () => {
     const matchesSearch =
         product.name.toLowerCase().includes(q) ||
         (product.id && product.id.toLowerCase().includes(q)) ||
+        (product._id && product._id.toLowerCase().includes(q)) ||
         (product.color && product.color.toLowerCase().includes(q)) ||
         getCategoryName(product).toLowerCase().includes(q);
 

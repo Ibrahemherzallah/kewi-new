@@ -9,6 +9,8 @@ import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow,} from "@/
 import {Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerClose,} from "@/components/ui/drawer";
 import {toast} from "sonner";
 import {useLanguage} from "@/contexts/LanguageContext.tsx";
+import logo from "../assets/logo.png";
+
 interface PurchaseProduct {
   productId: string;
   quantity: number;
@@ -46,7 +48,7 @@ interface Purchase {
   deliveredAt?: string;
 }
 
-const API_BASE = "http://localhost:5001"; // 🔁 change if needed
+const API_BASE = "http://localhost:5001";
 
 const AdminOrders = () => {
   const [orders, setOrders] = useState<Purchase[]>([]);
@@ -59,8 +61,19 @@ const AdminOrders = () => {
   const [selectedOrder, setSelectedOrder] = useState<Purchase | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { language } = useLanguage();
+  // const [copied, setCopied] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
-    const handlePrintInvoice = (order: Purchase) => {
+  const handleCopy = async (id: string) => {
+    try {
+      await navigator.clipboard.writeText(id);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 1500);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+  const handlePrintInvoice = (order: Purchase) => {
         const printWindow = window.open("", "_blank", "width=800,height=900");
         if (!printWindow) return;
 
@@ -138,6 +151,7 @@ const AdminOrders = () => {
         <div class="header">
           <div>
             <div class="store-name">
+              <img src="${logo}" alt="logo" style="width: 25px; height: 25px" />
               ${language === "ar" ? "فاتورة الطلب" : "Order Invoice"}
             </div>
             <div class="small">
@@ -223,7 +237,7 @@ const AdminOrders = () => {
             // Uncomment if you *want* it to auto-close after printing:
             // window.close();
           };
-        <\/script>
+        </script>
       </body>
     </html>
   `;
@@ -534,7 +548,15 @@ const AdminOrders = () => {
                               className="border border-border rounded-lg p-4 bg-card"
                           >
                             {/*testtttt*/}
-                            <p><strong>Product ID:</strong> {p.id}</p>
+                            <p>
+                              <strong>Product ID:</strong>{" "}
+                              <span onClick={() => handleCopy(p.id)} className="cursor-pointer text-primary hover:underline">
+                                {p.id}
+                              </span>
+                              {copiedId === p.id && (
+                                  <span className="ml-2 text-green-500 text-sm">✓ Copied</span>
+                              )}
+                            </p>
                             <p><strong>Product Name:</strong> {p.name}</p>
                             <p><strong>Quantity:</strong> {p.quantity}</p>
                             <p><strong>Color:</strong> {p.color || "—"}</p>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import {useEffect, useMemo, useRef, useState} from "react";
 import { useParams, Link } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { ProductCard } from "@/components/ProductCard";
@@ -70,7 +70,14 @@ const CategoryProducts = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const randomRankRef = useRef<Record<string, number>>({});
 
+    const getRandomRank = (key: string) => {
+        if (randomRankRef.current[key] == null) {
+            randomRankRef.current[key] = Math.random();
+        }
+        return randomRankRef.current[key];
+    };
     const getLocalizedName = (p: ApiProduct): string => {
         if (!p.name) return "";
         if (typeof p.name === "string") return p.name;
@@ -133,10 +140,43 @@ const CategoryProducts = () => {
     }, [categoryId]);
 
     const isHandbagsCategory = category?.name === "حقائب اليد";
+    const sortWithSoldOutBottom = (list: ApiProduct[]) => {
+        const arr = [...list];
 
-    const filteredProducts = [...products]
-        .filter((p) => {
-            const q = searchQuery.toLowerCase();
+        arr.sort((a, b) => {
+            const aSold = !!(a as any).isSoldOut;
+            const bSold = !!(b as any).isSoldOut;
+
+            // ✅ 1) Sold out always at bottom
+            if (aSold !== bSold) return aSold ? 1 : -1;
+
+            // ✅ 2) If both same soldOut state, apply your chosen sort
+            if (sortOrder === "random") {
+                const aKey = String((a as any)._id || (a as any).id);
+                const bKey = String((b as any)._id || (b as any).id);
+                return getRandomRank(aKey) - getRandomRank(bKey); // your stable random
+            }
+
+            const aCreated = (a as any).createdAt;
+            const bCreated = (b as any).createdAt;
+            if (!aCreated || !bCreated) return 0;
+
+            const aTime = new Date(aCreated).getTime();
+            const bTime = new Date(bCreated).getTime();
+
+            if (sortOrder === "latest") return bTime - aTime;
+            if (sortOrder === "oldest") return aTime - bTime;
+
+            return 0;
+        });
+
+        return arr;
+    };
+
+    const filteredProducts = useMemo(() => {
+        const q = searchQuery.toLowerCase();
+
+        const list = [...products].filter((p) => {
             const name = getLocalizedName(p).toLowerCase();
             const desc = getLocalizedDescription(p).toLowerCase();
             const internalId = (p.id || "").toLowerCase();
@@ -144,52 +184,49 @@ const CategoryProducts = () => {
             const matchesSearch =
                 name.includes(q) || desc.includes(q) || internalId.includes(q);
 
-            // brand filter only active for handbags category
+            // brand filter (handbags only)
             let matchesBrand = true;
             if (isHandbagsCategory && selectedBrand !== "all") {
-                if (!p.brandId) {
-                    matchesBrand = false;
-                } else if (typeof p.brandId === "object") {
-                    matchesBrand = p.brandId?._id === selectedBrand;
-                } else {
-                    matchesBrand = p.brandId === selectedBrand;
-                }
+                if (!p.brandId) matchesBrand = false;
+                else if (typeof p.brandId === "object") matchesBrand = p.brandId?._id === selectedBrand;
+                else matchesBrand = p.brandId === selectedBrand;
             }
 
-            // size filter (for كل التصنيفات)
+            // size filter
             let matchesSize = true;
             if (selectedSize !== "all") {
-                const productSize = (p as any).size; // or p.size if you added it to the type
+                const productSize = (p as any).size;
                 matchesSize = productSize === selectedSize;
             }
 
             return matchesSearch && matchesBrand && matchesSize;
-        })
-        .sort((a, b) => {
-            // 🔹 Sorting by createdAt if available, otherwise leave as-is
-            const aCreated = (a as any).createdAt;
-            const bCreated = (b as any).createdAt;
+        });
 
+        // ✅ Sort
+        list.sort((a, b) => {
             if (sortOrder === "random") {
-                return Math.random() - 0.5;
+                const aKey = String((a as any)._id || a.id);
+                const bKey = String((b as any)._id || b.id);
+                return getRandomRank(aKey) - getRandomRank(bKey);
             }
 
-            // if we don't have dates, don't change order
+            const aCreated = (a as any).createdAt;
+            const bCreated = (b as any).createdAt;
             if (!aCreated || !bCreated) return 0;
 
             const aTime = new Date(aCreated).getTime();
             const bTime = new Date(bCreated).getTime();
 
-            if (sortOrder === "latest") {
-                // الأحدث → bigger date first
-                return bTime - aTime;
-            } else if (sortOrder === "oldest") {
-                // الأقدم → smaller date first
-                return aTime - bTime;
-            }
+            if (sortOrder === "latest") return bTime - aTime;
+            if (sortOrder === "oldest") return aTime - bTime;
 
             return 0;
         });
+
+        return sortWithSoldOutBottom(list);
+    }, [products, searchQuery, isHandbagsCategory, selectedBrand, selectedSize, sortOrder,]);
+
+
     const getProductName = (product: BackendProduct, language: string) => {
         if (!product.name) return language === "ar" ? "منتج بدون اسم" : "Unnamed product";
         if (typeof product.name === "string") return product.name;

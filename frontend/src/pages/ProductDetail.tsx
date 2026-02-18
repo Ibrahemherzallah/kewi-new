@@ -152,23 +152,6 @@ const ProductDetail = () => {
   const displayName = getLocalizedName(product);
   const displayDescription = getLocalizedDescription(product);
 
-  // Badges text
-  const badgeEn = product?.isSoldOut
-      ? "sold out"
-      : product?.isOnSale
-          ? "on sale"
-          : product?.isSoon
-              ? "coming soon"
-              : "available";
-
-  const badgeAr = product?.isSoldOut
-      ? "نفذ"
-      : product?.isOnSale
-          ? "معروض للبيع"
-          : product?.isSoon
-              ? "قريباً"
-              : "متوفر";
-
   const barcode = product?.barcode || product?.id || product?._id;
 
   // ---------- MULTI-COLOR LOGIC ----------
@@ -189,6 +172,31 @@ const ProductDetail = () => {
   const isSoldOut = Boolean(product?.isSoldOut) || totalStock <= 0;
   const isOnSale = Boolean(product?.isOnSale);
 
+
+
+
+  // Badges text
+  const badgeEn = isSoldOut ? 'sold out' : product?.isSoldOut
+      ? "sold out"
+      : product?.isOnSale
+          ? "on sale"
+          : product?.isSoon
+              ? "coming soon"
+              : "available";
+
+  const badgeAr = isSoldOut ? 'نفذ' : product?.isSoldOut
+      ? "نفذ"
+      : product?.isOnSale
+          ? "معروض للبيع"
+          : product?.isSoon
+              ? "قريباً"
+              : "متوفر";
+
+
+
+
+
+  console.log("isSoldOut is : " , isSoldOut)
   // ---------- PRICE LOGIC (UNIFIED WITH ProductCard) ----------
 
   const role =
@@ -355,7 +363,7 @@ const ProductDetail = () => {
                     <img
                         src={images[selectedImage]}
                         alt={displayName || "Product image"}
-                        className="w-full h-full object-cover"
+                        className={`${isSoldOut ?? `opacity-30` } w-full h-full object-cover`}
                     />
                 ) : (
                     <span className="text-muted-foreground text-sm">

@@ -265,8 +265,7 @@ const Cart = () => {
     if (cart.length === 0) return;
 
     try {
-      const token =
-          typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
       // ✅ 0) Loyalty: if user chose a free product, redeem 100 pts in backend
       if (canRedeemFreeProduct && freeProductId) {
@@ -377,32 +376,6 @@ const Cart = () => {
       if (!purchaseRes.ok) {
         const errData = await purchaseRes.json().catch(() => null);
         throw new Error(errData?.message || "فشل في إرسال الطلب");
-      }
-
-      // ✅ 3) Update stock for each product (uses variant if exists)
-      for (const item of cart) {
-        const stockRes = await fetch(
-            "http://localhost:5001/user/product/update-stock",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                id: item._id,                    // REAL product id
-                quantity: item.quantity || 1,
-                color: (item as any).color || "",
-                variantId: (item as any).variantId || null,
-              }),
-            }
-        );
-
-        const stockData = await stockRes.json().catch(() => null);
-
-        if (!stockRes.ok) {
-          throw new Error(
-              stockData?.message ||
-              `فشل في تحديث مخزون المنتج ${getItemName(item)}`
-          );
-        }
       }
 
       // ✅ 4) Send WhatsApp message (sendWhatsAppMessage)

@@ -10,15 +10,16 @@ export const addWholesaler = async (req, res) => {
             return res.status(400).json({ error: "Password must be at least 8 characters long" });
         }
 
-        const user = await User.findOne({ userName });
+        const user = await User.findOne({userName, role: "wholesaler"});
+
         if (user) {
-            console.log("Username exists");
-            return res.status(400).json({ error: "Username exists" });
+            return res.status(400).json({ error: "Wholesaler username already exists" });
         }
 
-        const phoneExists = await User.findOne({ phone });
+        const phoneExists = await User.findOne({phone, role: "wholesaler"});
+
         if (phoneExists) {
-            return res.status(400).json({ message: "Phone already in use" });
+            return res.status(400).json({ error: "Wholesaler phone already in use" });
         }
 
         const salt = await bcrypt.genSalt(10);
