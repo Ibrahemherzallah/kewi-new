@@ -117,7 +117,7 @@ const AdminDashboard = () => {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Link to="/admin/products">
+          <Link to="/admin/products/page">
             <Card className="p-8 hover:shadow-medium transition-all cursor-pointer group border-border">
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -145,7 +145,7 @@ const AdminDashboard = () => {
             </Card>
           </Link>
 
-          <Link to="/admin/brands">
+          <Link to="/admin/brands/page">
             <Card className="p-8 hover:shadow-medium transition-all cursor-pointer group border-border">
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-16 h-16 bg-secondary/10 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -159,7 +159,7 @@ const AdminDashboard = () => {
             </Card>
           </Link>
 
-          <Link to="/admin/categories">
+          <Link to="/admin/categories/page">
             <Card className="p-8 hover:shadow-medium transition-all cursor-pointer group border-border">
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -173,7 +173,7 @@ const AdminDashboard = () => {
             </Card>
           </Link>
 
-          <Link to="/admin/wholesalers">
+          <Link to="/admin/wholesalers/page">
             <Card className="p-8 hover:shadow-medium transition-all cursor-pointer group border-border">
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-16 h-16 bg-warning/10 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -187,7 +187,7 @@ const AdminDashboard = () => {
             </Card>
           </Link>
 
-          <Link to="/admin/orders">
+          <Link to="/admin/orders/page">
             <Card className="p-8 hover:shadow-medium transition-all cursor-pointer group border-border">
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">

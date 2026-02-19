@@ -10,6 +10,13 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import {Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious,} from "@/components/ui/carousel";
 import { Gift } from "lucide-react";
 import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,} from "@/components/ui/dialog";
+import logo from "../assets/logo.png";
+import logoText from "../assets/LogoText.png";
+import logoTextWhite from "../assets/logoTextWhite.png";
+import {useTheme} from "next-themes";
+import { LanguageToggle } from "@/components/LanguageToggle";
+import { ThemeToggle } from "@/components/ThemeToggle";
+
 // 🔹 API base
 const API_BASE = import.meta.env.VITE_API_URL || "https://kewi.ps";
 const CATEGORIES_API = `${API_BASE}/admin/categories`;
@@ -55,7 +62,8 @@ type UiProduct = {
   retailPrice: number;
   wholesalePrice: number;
 };
-
+const IS_SITE_LIVE =
+    import.meta.env.VITE_SITE_LIVE === "true" || false;
 const placeholderImage =
     "https://via.placeholder.com/400x400.png?text=No+Image";
 
@@ -67,7 +75,18 @@ const Home = () => {
   const [featuredProducts, setFeaturedProducts] = useState<BackendProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [showBirthdayPopup, setShowBirthdayPopup] = useState(false);
+  const rawUser =
+      typeof window !== "undefined" ? localStorage.getItem("user") : null;
 
+  let isAdmin = false;
+  if (rawUser) {
+    try {
+      const parsed = JSON.parse(rawUser);
+      isAdmin = parsed?.role === "admin";
+    } catch {
+      isAdmin = false;
+    }
+  }
   const isBirthdayToday = (): boolean => {
     if (typeof window === "undefined") return false;
 
@@ -206,6 +225,91 @@ const Home = () => {
       } ${t("toast.addedDesc")}`,
     });
   };
+
+
+  if (!IS_SITE_LIVE && !isAdmin) {
+    const { theme } = useTheme();
+
+    return (
+        <div className="min-h-screen bg-background flex flex-col">
+          {/* Minimal top bar */}
+          <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-md">
+            <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+              {/* Logo */}
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 flex items-center justify-center">
+                  <img
+                      src={logo}
+                      alt="Kewi logo"
+                      className="w-10 h-10 object-contain"
+                  />
+                </div>
+                <img
+                    src={theme === "dark" ? logoTextWhite : logoText}
+                    alt="Kewi"
+                    className={theme === "dark" ? "w-40 h-40" : "w-20 h-4"}
+                />
+              </div>
+
+              {/* Toggles */}
+              <div className="flex items-center gap-2">
+                <LanguageToggle apply={true} />
+                <ThemeToggle />
+              </div>
+            </div>
+          </header>
+
+          {/* Coming soon hero */}
+          <main className="flex-1 flex items-center justify-center px-4 py-16">
+            <div className="max-w-xl text-center space-y-6">
+              <h1 className="text-4xl md:text-5xl font-bold">
+                {language === "ar" ? "قريباً في كيوي ستور" : "Coming Soon at Kewi Store"}
+              </h1>
+
+              <p className="text-muted-foreground text-lg">
+                {language === "ar"
+                    ? "نقوم حالياً بتجهيز متجر كيوي بأفضل المنتجات وتجربة تسوق مميزة. سيتم فتح الموقع قريباً للطلبات عبر الإنترنت."
+                    : "We’re preparing Kewi Store with the best products and a great shopping experience. Online orders will open very soon."}
+              </p>
+
+              <p className="text-sm text-muted-foreground">
+                {language === "ar"
+                    ? "يمكنك متابعتنا على فيسبوك وإنستغرام لمعرفة موعد الإطلاق والعروض الأولى."
+                    : "Follow us on Facebook and Instagram to know the launch date and first offers."}
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
+                <a
+                    href="https://www.facebook.com/kewi.jenin"
+                    target="_blank"
+                    rel="noreferrer"
+                >
+                  <Button variant="outline" className="w-full sm:w-auto">
+                    {language === "ar"
+                        ? "تابعنا على فيسبوك"
+                        : "Follow on Facebook"}
+                  </Button>
+                </a>
+
+                <a
+                    href="https://www.instagram.com/kewi.jenin"
+                    target="_blank"
+                    rel="noreferrer"
+                >
+                  <Button className="w-full sm:w-auto">
+                    {language === "ar"
+                        ? "تابعنا على إنستغرام"
+                        : "Follow on Instagram"}
+                  </Button>
+                </a>
+              </div>
+            </div>
+          </main>
+        </div>
+    );
+  }
+
+
   return (
       <div className="min-h-screen bg-background">
         <Navbar cartCount={0} />
