@@ -1,13 +1,7 @@
 // src/components/admin/AddBrandDialog.tsx
 
 import { useState, FormEvent, ChangeEvent } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import {Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,7 +13,7 @@ import imageCompression from "browser-image-compression";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "@/firebase";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001";
+const API_BASE = import.meta.env.VITE_API_URL || "https://kewi.ps";
 const BRANDS_API = `${API_BASE}/admin/brands`;
 
 type AddBrandDialogProps = {

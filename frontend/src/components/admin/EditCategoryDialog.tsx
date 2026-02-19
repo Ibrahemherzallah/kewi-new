@@ -18,7 +18,7 @@ import { storage } from "@/firebase.ts";
 
 const API_BASE = import.meta.env.VITE_API_URL
     ? `${import.meta.env.VITE_API_URL}/admin/categories`
-    : "http://localhost:5001/admin/categories";
+    : "https://kewi.ps/admin/categories";
 
 export const EditCategoryDialog = ({open, setOpen, category, onUpdated,}: {
     open: boolean;
