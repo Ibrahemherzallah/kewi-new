@@ -48,7 +48,7 @@ interface Purchase {
   deliveredAt?: string;
 }
 
-const API_BASE = "http://localhost:5001";
+const API_BASE = "https://kewi.ps";
 
 const AdminOrders = () => {
   const [orders, setOrders] = useState<Purchase[]>([]);
@@ -364,7 +364,7 @@ const AdminOrders = () => {
     if (!confirm("Are you sure you want to delete this order?")) return;
 
     try {
-      const res = await fetch(`http://localhost:5001/admin/orders/${orderId}`, {
+      const res = await fetch(`https://kewi.ps/admin/orders/${orderId}`, {
         method: "DELETE",
       });
 

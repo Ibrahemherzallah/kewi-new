@@ -13,7 +13,7 @@ import {EditCategoryDialog} from "@/components/admin/EditCategoryDialog.tsx";
 // 🔹 adjust this to your actual API base / route
 const CATEGORIES_API = import.meta.env.VITE_API_URL
     ? `${import.meta.env.VITE_API_URL}/admin/categories`
-    : "http://localhost:5001/admin/categories";
+    : "https://kewi.ps/admin/categories";
 
 type Category = {
   _id: string;

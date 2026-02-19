@@ -11,7 +11,7 @@ import { ShoppingCart, ArrowLeft, Barcode } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001";
+const API_BASE = import.meta.env.VITE_API_URL || "https://kewi.ps";
 const PRODUCT_API = (id: string) => `${API_BASE}/admin/products/${id}`;
 const CATEGORY_PRODUCTS_API = (id: string) =>
     `${API_BASE}/admin/products/category/${id}`;

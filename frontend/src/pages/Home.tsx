@@ -11,7 +11,7 @@ import {Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious,
 import { Gift } from "lucide-react";
 import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,} from "@/components/ui/dialog";
 // 🔹 API base
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001";
+const API_BASE = import.meta.env.VITE_API_URL || "https://kewi.ps";
 const CATEGORIES_API = `${API_BASE}/admin/categories`;
 const PRODUCTS_API = `${API_BASE}/user/products`;
 

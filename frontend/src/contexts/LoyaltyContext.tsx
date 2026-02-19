@@ -1,7 +1,7 @@
 // src/contexts/LoyaltyContext.tsx
 import React, {createContext, useContext, useState, useEffect, useCallback,} from "react";
 
-const API_BASE = "http://localhost:5001"; // same as you use elsewhere
+const API_BASE = "https://kewi.ps"; // same as you use elsewhere
 
 interface LoyaltyContextType {
     points: number;

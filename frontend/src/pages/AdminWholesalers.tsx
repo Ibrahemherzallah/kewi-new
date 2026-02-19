@@ -35,7 +35,7 @@ const AdminWholesaler = () => {
   const { data: usersData = [], isLoading: loadingUsers } = useQuery({
     queryKey: ["admin-users"],
     queryFn: async () => {
-      const res = await fetch("http://localhost:5001/admin/users");
+      const res = await fetch("https://kewi.ps/admin/users");
       const data = await res.json();
       return Array.isArray(data) ? data : [];
     },
@@ -45,7 +45,7 @@ const AdminWholesaler = () => {
   const { data: wholesalersData = [], isLoading: loadingWholesalers } = useQuery({
     queryKey: ["admin-wholesalers"],
     queryFn: async () => {
-      const res = await fetch("http://localhost:5001/admin/wholesalers");
+      const res = await fetch("https://kewi.ps/admin/wholesalers");
       const data = await res.json();
       return Array.isArray(data) ? data : [];
     },
