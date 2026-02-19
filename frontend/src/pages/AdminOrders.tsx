@@ -223,7 +223,41 @@ const AdminOrders = () => {
             </tr>
           </table>
         </div>
-
+        <div style="margin-top: 24px;" class="small">
+          ${
+                    language === "ar"
+                        ? `
+              <div style="font-weight:600; margin-bottom:6px;">سياسة الإرجاع والاستبدال:</div>
+              <div style="margin-bottom:4px;">
+                يُقبل الإرجاع أو الاستبدال خلال 24 ساعة بشرط أن يكون المنتج بحالته الأصلية وبتغليفه الكامل.
+              </div>
+              <div style="margin-bottom:4px;">
+                لا يشمل الإرجاع منتجات العروض أو التصفيات إلا في حال وجود عيب مصنعي.
+              </div>
+              <ul style="margin:6px 0 0; padding-${dir === "rtl" ? "right" : "left"}: 18px;">
+                <li>يتحمل العميل رسوم الشحن إذا لم يكن الخطأ من المتجر.</li>
+              </ul>
+              <div style="margin-top:4px;">
+                يتم فحص المنتج قبل الموافقة، ويُعاد المبلغ حسب وسيلة الدفع خلال المدة المحددة.
+              </div>
+              `
+                        : `
+              <div style="font-weight:600; margin-bottom:6px;">Return & Exchange Policy:</div>
+              <div style="margin-bottom:4px;">
+                Returns or exchanges are accepted within 24 hours, provided the product is in its original condition with complete packaging.
+              </div>
+              <div style="margin-bottom:4px;">
+                Items from sales or clearance are not eligible for return unless there is a manufacturing defect.
+              </div>
+              <ul style="margin:6px 0 0; padding-left:18px;">
+                <li>The customer bears shipping fees if the error is not from the store.</li>
+              </ul>
+              <div style="margin-top:4px;">
+                The product is inspected before approval, and refunds are processed based on the payment method within the specified period.
+              </div>
+              `
+                }
+        </div>
         <p class="small" style="margin-top:24px;">
           ${language === "ar"
             ? "شكراً لتسوقكم معنا."
