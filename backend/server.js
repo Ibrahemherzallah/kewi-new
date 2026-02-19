@@ -74,20 +74,40 @@ app.use(
         contentSecurityPolicy: {
             useDefaults: true,
             directives: {
-                "script-src": [
+                defaultSrc: ["'self'"],
+
+                scriptSrc: [
                     "'self'",
-                    "https://cdn.jsdelivr.net"
+                    "https://cdn.jsdelivr.net",
+                    "'unsafe-inline'",
+                    "'unsafe-eval'"
                 ],
-                "img-src": ["'self'", "data:", "https://storage.googleapis.com"],
-                "connect-src": [
+
+                styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+
+                imgSrc: [
+                    "'self'",
+                    "data:",
+                    "https://storage.googleapis.com",
+                    "https://firebasestorage.googleapis.com"
+                ],
+
+                connectSrc: [
                     "'self'",
                     "https://kewi.ps",
-                    "https://www.kewi.ps"
-                ]
-            },
+                    "https://www.kewi.ps",
+                    "https://firebasestorage.googleapis.com",
+                    "https://storage.googleapis.com"
+                ],
+
+                workerSrc: ["'self'", "blob:"],
+
+                objectSrc: ["'none'"]
+            }
         }
     })
 );
+
 
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
