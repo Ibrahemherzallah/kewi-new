@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { EditProductDialog } from "@/components/admin/EditProductDialog";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue,} from "@/components/ui/select";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001";
+const API_BASE = import.meta.env.VITE_API_URL || "https://kewi.ps";
 const PRODUCTS_API = `${API_BASE}/admin/products`;
 const CATEGORIES_API = `${API_BASE}/admin/categories`;
 

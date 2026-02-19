@@ -18,7 +18,7 @@ import { AddBrandDialog } from "@/components/admin/AddBrandDialog";
 import { EditBrandDialog, Brand } from "@/components/admin/EditBrandDialog";
 import { useToast } from "@/hooks/use-toast";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5001";
+const API_BASE = import.meta.env.VITE_API_URL || "https://kewi.ps";
 const BRANDS_API = `${API_BASE}/admin/brands`;
 
 const AdminBrands = () => {

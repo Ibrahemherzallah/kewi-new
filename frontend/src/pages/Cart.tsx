@@ -283,7 +283,7 @@ const Cart = () => {
 
         try {
           const res = await fetch(
-              "http://localhost:5001/user/loyalty/redeem-free-product",
+              "https://kewi.ps/user/loyalty/redeem-free-product",
               {
                 method: "PATCH",
                 headers: {
@@ -364,7 +364,7 @@ const Cart = () => {
         paymentMethod: formData.paymentMethod
       };
 
-      const purchaseRes = await fetch("http://localhost:5001/user/purchase", {
+      const purchaseRes = await fetch("https://kewi.ps/user/purchase", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -394,7 +394,7 @@ const Cart = () => {
       };
 
       const waRes = await fetch(
-          "http://localhost:5001/user/purchase/send-whatsapp",
+          "https://kewi.ps/user/purchase/send-whatsapp",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -490,7 +490,7 @@ const Cart = () => {
       }
 
       const res = await fetch(
-          "http://localhost:5001/user/loyalty/redeem-discount",
+          "https://kewi.ps/user/loyalty/redeem-discount",
           {
             method: "PATCH",
             headers: {
