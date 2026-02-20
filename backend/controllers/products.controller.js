@@ -464,10 +464,6 @@ export const deleteProduct = async (req, res) => {
         const product = await Product.findById(id);
         if (!product) return res.status(404).json({ message: "Product not found" });
 
-        // Delete all images in product_images/{productId}/
-        const [files] = await bucket.getFiles({ prefix: `product_images/${id}/` });
-        const deletePromises = files.map(file => file.delete());
-        await Promise.all(deletePromises);
 
         // Delete product from DB
         await Product.findByIdAndDelete(id);
