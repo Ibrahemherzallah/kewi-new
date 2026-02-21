@@ -222,9 +222,9 @@ const PurchaseHistory = () => {
         title: language === "ar" ? "تم تأكيد الاستلام!" : "Order confirmed!",
         description:
             pointsEarned > 0
-                ? language === "ar"
+                ? role === 'user' ? language === "ar"
                     ? `حصلت على ${pointsEarned} نقطة ولاء`
-                    : `You earned ${pointsEarned} loyalty points!`
+                    : `You earned ${pointsEarned} loyalty points!` : ''
                 : language === "ar"
                     ? "تم تأكيد الطلب"
                     : "Order has been confirmed",

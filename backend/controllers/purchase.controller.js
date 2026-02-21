@@ -144,24 +144,24 @@ const deductStockForOrder = async (order, session) => {
 
 export const updateOrderStatus = async (req, res) => {
     const session = await mongoose.startSession();
+    let earnedPoints = 0;
 
     try {
         const { id } = req.params;
         const { action } = req.body;
 
-        let earnedPoints = 0;
 
         await session.withTransaction(async () => {
             const order = await Purchase.findById(id).session(session);
             if (!order) {
-                return res.status(404).json({ message: "Order not found" });
+                throw new Error("ORDER_NOT_FOUND");
             }
 
             let updated = false;
 
             if (action === "confirm") {
                 if (order.orderStatus !== "ordered") {
-                    return res.status(400).json({ message: "Order status not changed (invalid state)" });
+                    throw new Error("INVALID_STATE_CONFIRM");
                 }
 
                 // ✅ deduct stock once
@@ -173,59 +173,115 @@ export const updateOrderStatus = async (req, res) => {
                 order.orderStatus = "confirmed";
                 order.confirmedAt = new Date();
                 updated = true;
-            }
-
-            else if (action === "ship") {
-                if (order.orderStatus === "ordered" || order.orderStatus === "confirmed") {
+            } else if (action === "ship") {
+                if (
+                    order.orderStatus === "ordered" ||
+                    order.orderStatus === "confirmed"
+                ) {
                     order.orderStatus = "shipped";
                     if (!order.confirmedAt) order.confirmedAt = new Date();
                     order.shippedAt = new Date();
                     updated = true;
+                } else {
+                    throw new Error("INVALID_STATE_SHIP");
                 }
-            }
-
-            else if (action === "delivered") {
-                if (order.orderStatus === "shipped" || order.orderStatus === "confirmed") {
-                    const wasDeliveredBefore = order.orderStatus === "delivered";
+            } else if (action === "delivered") {
+                if (
+                    order.orderStatus === "shipped" ||
+                    order.orderStatus === "confirmed"
+                ) {
+                    const previousStatus = order.orderStatus;
 
                     order.orderStatus = "delivered";
                     order.deliveredAt = new Date();
                     updated = true;
 
-                    if (!wasDeliveredBefore) {
+                    // Only give points the FIRST time
+                    if (previousStatus !== "delivered") {
                         earnedPoints = calculatePointsFromPurchase(order.totalPrice);
+                        console.log("earnedPoints is:", earnedPoints);
                     }
+                } else {
+                    throw new Error("INVALID_STATE_DELIVER");
                 }
-            }
-
-            else {
-                return res.status(400).json({ message: "Invalid action" });
+            } else {
+                throw new Error("INVALID_ACTION");
             }
 
             if (!updated) {
-                return res.status(400).json({ message: "Order status not changed (invalid state)" });
+                throw new Error("ORDER_NOT_CHANGED");
             }
 
             await order.save({ session });
-
-            // ✅ IMPORTANT: do NOT trust role from req.body
-            // If you need user points update, determine role from token/db instead
         });
 
-        // After transaction success, return fresh order
-        const updatedOrder = await Purchase.findById(id);
-        return res.status(200).json({ order: updatedOrder });
+        // 🟢 Transaction succeeded – now handle loyalty points (outside session)
+        let totalPoints;
 
+        if (earnedPoints > 0 && req.userId) {
+            // Load user from DB to check role safely
+            const user = await User.findById(req.userId);
+
+            if (user) {
+                if (user.role === "user") {
+                    // ✅ only "user" role gets points
+                    user.loyaltyPoints = (user.loyaltyPoints || 0) + earnedPoints;
+                    await user.save();
+                    totalPoints = user.loyaltyPoints;
+
+                    console.log(
+                        `Added ${earnedPoints} points to user ${user._id}. Role=${user.role}. Total=${totalPoints}`
+                    );
+                } else {
+                    console.log(
+                        `Order delivered but no points added because role is "${user.role}".`
+                    );
+                }
+            } else {
+                console.warn(
+                    "Could not find user to add loyalty points. req.userId =",
+                    req.userId
+                );
+            }
+        }
+
+        const updatedOrder = await Purchase.findById(id);
+
+        return res.status(200).json({
+            order: updatedOrder,
+            earnedPoints,
+            totalPoints, // may be undefined if no points added
+        });
     } catch (error) {
         console.error("Error updating order status:", error);
+
+        if (error.message === "ORDER_NOT_FOUND") {
+            return res.status(404).json({ message: "Order not found" });
+        }
+
+        if (
+            error.message === "INVALID_STATE_CONFIRM" ||
+            error.message === "INVALID_STATE_SHIP" ||
+            error.message === "INVALID_STATE_DELIVER" ||
+            error.message === "ORDER_NOT_CHANGED"
+        ) {
+            return res
+                .status(400)
+                .json({ message: "Order status not changed (invalid state)" });
+        }
+
+        if (error.message === "INVALID_ACTION") {
+            return res.status(400).json({ message: "Invalid action" });
+        }
+
         return res.status(500).json({
-            message: error.message || "Failed to update order status",
+            message: "Failed to update order status",
+            error: error.message,
         });
     } finally {
         session.endSession();
     }
-};// controllers/loyalty.controller.js
-
+};
 
 // already have this for percentage discount:
 export const redeemDiscountWithPoints = async (req, res) => {

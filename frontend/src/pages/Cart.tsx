@@ -259,11 +259,51 @@ const Cart = () => {
     return found?.name.ar || type;
   };
 
+  // For each cart item, figure out how many units are available
+  const getAvailableStockForItem = (item: any): number => {
+    // If this is a multi-color product with variantId, read stock from that variant
+    if (item.variantId && Array.isArray(item.variants)) {
+      const variant = item.variants.find((v: any) => v._id === item.variantId);
+      if (variant && typeof variant.stockNumber === "number") {
+        return variant.stockNumber;
+      }
+    }
+
+    // Fallback: single-color product → stockNumber on the root product
+    if (typeof item.stockNumber === "number") {
+      return item.stockNumber;
+    }
+
+    // If we don't know, treat as 0 to be safe
+    return 0;
+  };
+
   const handleCheckout = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true)
     if (cart.length === 0) return;
+// 🔎 0) Check stock for each item before doing anything else
+    const outOfStockItem = cart.find((item) => {
+      const requested = item.quantity || 1;
+      const available = getAvailableStockForItem(item);
+      return requested > available;
+    });
 
+    if (outOfStockItem) {
+      const name = getItemName(outOfStockItem);
+
+      toast({
+        title: language === "ar" ? "الكمية غير متاحة" : "Insufficient stock",
+        description:
+            language === "ar"
+                ? `الكمية المطلوبة من المنتج "${name}" أكبر من الكمية المتوفرة في المخزون.`
+                : `The requested quantity for "${name}" is greater than the available stock.`,
+        variant: "destructive",
+      });
+
+      setLoading(false);
+      return;
+    }
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
@@ -347,6 +387,15 @@ const Cart = () => {
       // ✅ Totals (بدون / مع توصيل)
       const totalWithoutDelivery = Number(total.toFixed(2));
       const totalWithDelivery = Number(grandTotal.toFixed(2));
+
+      if (formData.phone.length < 10) {
+        toast({
+          title: "رقم الهاتف غير صالح",
+          description: "رقم الهاتف يجب أن لا يقل عن 10 أرقام",
+          variant: "destructive"
+        });
+        return;
+      }
 
       // ✅ 2) Send purchase to backend (addPurchase)
       const purchaseBody = {
