@@ -509,7 +509,7 @@ ${productsMessage}
 
         const response = await client.messages.create({
             from: `whatsapp:${process.env.TWILIO_WHATSAPP_FROM}`,
-            to: "whatsapp:+972597250539",
+            to: "whatsapp:+972567758087",
             body: message,
         });
 
@@ -553,7 +553,7 @@ ${productsMessage}
     try {
         const response = await client.messages.create({
             from: `whatsapp:${process.env.TWILIO_WHATSAPP_FROM}`,
-            to: 'whatsapp:+972597250539',
+            to: 'whatsapp:+972567758087',
             body: message,
         });
 
@@ -649,10 +649,7 @@ export const verifyLahzaPayment = async (req, res) => {
 export const initLahzaPayment = async (req, res) => {
     try {
         const { amountILS, email, mobile, ref } = req.body;
-        console.log("amountILS : " , amountILS)
-        console.log("email : " , email)
-        console.log("mobile : " , mobile)
-        console.log("ref : " , ref)
+
         // 1) Basic validation
         if (!amountILS || !mobile) {
             return res.status(400).json({ message: "amountILS and mobile are required" });
@@ -686,7 +683,6 @@ export const initLahzaPayment = async (req, res) => {
         // response.data.data.authorization_url or similar.
         // For now, we’ll assume response.data.data.authorization_url:
         const data = response.data;
-        console.log("Lahza init response:", data);
 
         // TODO: adjust this line according to the real response field:
         const authUrl = data.data?.authorization_url || data.authorization_url;
