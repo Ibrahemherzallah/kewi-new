@@ -47,7 +47,7 @@ interface City {
   name: string;
   region: "w" | "d" | "q";
 }
-
+const FREE_PRODUCT_POINTS_COST = 100;
 const Cart = () => {
   const { t, language } = useLanguage();
   const { toast } = useToast();
@@ -88,9 +88,9 @@ const Cart = () => {
   const [selectedRegion, setSelectedRegion] = useState<string>("");
   const [selectedType, setSelectedType] = useState<string>("");
   const [deliveryPrice, setDeliveryPrice] = useState<number>(0);
-
+  const [confirmFreeProductOpen, setConfirmFreeProductOpen] = useState(false);
+  const [pendingFreeProductId, setPendingFreeProductId] = useState<string | null>(null);
   const discount = getDiscount();
-  console.log("The discount is : ", discount)
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const role = typeof window !== "undefined" ? localStorage.getItem("userRole") : null;
   const isLoggedIn = !!token;
@@ -101,7 +101,6 @@ const Cart = () => {
   const getItemId = (item: CartItem): string => item.id || item._id || "";
 
   const getItemName = (item: CartItem): string => {
-    console.log("The item name is: " , item.name)
     if (!item.name) return "";
     if (typeof item.name === "string") return item.name;
     return (
@@ -124,6 +123,30 @@ const Cart = () => {
   const [confirmDiscountOpen, setConfirmDiscountOpen] = useState(false);
 
   // ---------- LOAD CART ----------
+  useEffect(() => {
+    const paymentSuccess = localStorage.getItem("paymentSuccess");
+
+    if (paymentSuccess === "true") {
+      // clear everything
+      updateCart([]);
+      setCheckoutOpen(false);
+      setFreeProductId(null);
+      setApplyDiscount(false);
+      setFormData({
+        name: "",
+        phone: "",
+        address: "",
+        city: "",
+        notes: "",
+      });
+      setSelectedRegion("");
+      setSelectedType("");
+      setDeliveryPrice(0);
+
+      // remove flag
+      localStorage.removeItem("paymentSuccess");
+    }
+  }, []);
 
   useEffect(() => {
     const loadCart = () => {
@@ -228,7 +251,7 @@ const Cart = () => {
 
   const calculateDiscount = () => {
     // Free product case (uses points >= 100)
-    if (canRedeemFreeProduct && freeProductId) {
+    if (freeProductId) {
       const freeItem = cart.find((item) => getItemId(item) === freeProductId);
       if (!freeItem) return 0;
       const { mainPrice } = getPricesForItem(freeItem);
@@ -278,11 +301,114 @@ const Cart = () => {
     return 0;
   };
 
+  const handleCashOnDeliveryCheckout = async (purchaseBody: any, token: string | null, extras: { totalWithoutDelivery: number; totalWithDelivery: number; numOfItems: number; productsPayload: any[]; }) => {
+    const { totalWithoutDelivery, totalWithDelivery, numOfItems, productsPayload } = extras;
+
+    // 1) create purchase
+    const purchaseRes = await fetch("https://kewi.ps/user/purchase", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(purchaseBody),
+    });
+
+    if (!purchaseRes.ok) {
+      const errData = await purchaseRes.json().catch(() => null);
+      throw new Error(errData?.message || "فشل في إرسال الطلب");
+    }
+
+    // 2) send WhatsApp
+    const whatsappBody = {
+      cName: formData.name,
+      cNumber: formData.phone,
+      cAddress: formData.city,
+      cCity: formData.address || "",
+      notes: formData.notes,
+      price: totalWithDelivery,
+      totalPrice: totalWithoutDelivery,
+      numOfItems,
+      delivery: normalizeDelivery(selectedType),
+      type: isWholesalerUser ? "تاجر" : "زبون",
+      products: productsPayload,
+    };
+
+    const waRes = await fetch("https://kewi.ps/user/purchase/send-whatsapp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(whatsappBody),
+    });
+
+    if (!waRes.ok) {
+      const waErr = await waRes.json().catch(() => null);
+      throw new Error(waErr?.message || "فشل في إرسال رسالة واتساب");
+    }
+
+    // 3) Clear + Toast
+    updateCart([]);
+    setCheckoutOpen(false);
+    setFreeProductId(null);
+    setApplyDiscount(false);
+    setFormData({ name: "", phone: "", address: "", city: "", notes: "" });
+    setSelectedRegion("");
+    setSelectedType("");
+    setDeliveryPrice(0);
+
+    toast({
+      title: t("toast.orderPlaced"),
+      description: t("toast.orderDesc"),
+    });
+  };
+
+  const handleVisaCheckout = async ({purchaseBody, totalWithDelivery,}: { purchaseBody: any; totalWithDelivery: number; }) => {
+    try {
+      // ✅ Save purchase data temporarily
+      localStorage.setItem(
+          "pendingOrder",
+          JSON.stringify(purchaseBody)
+      );
+
+      // ✅ Initialize Lahza ONLY
+      const res = await fetch(
+          "https://kewi.ps/user/payments/lahza/init",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              amountILS: totalWithDelivery,
+              email: "",
+              mobile: purchaseBody.cNumber,
+              ref: crypto.randomUUID(), // temporary reference
+            }),
+          }
+      );
+
+      if (!res.ok) {
+        throw new Error("Failed to start payment");
+      }
+
+      const data = await res.json();
+
+      if (!data.authorizationUrl) {
+        throw new Error("Payment URL not returned");
+      }
+
+      window.location.href = data.authorizationUrl;
+    } catch (err) {
+      console.error(err);
+    }
+  };
   const handleCheckout = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setLoading(true)
-    if (cart.length === 0) return;
-// 🔎 0) Check stock for each item before doing anything else
+    setLoading(true);
+
+    if (cart.length === 0) {
+      setLoading(false);
+      return;
+    }
+
+    // 🔎 0) Check stock for each item before doing anything else
     const outOfStockItem = cart.find((item) => {
       const requested = item.quantity || 1;
       const available = getAvailableStockForItem(item);
@@ -304,87 +430,34 @@ const Cart = () => {
       setLoading(false);
       return;
     }
+
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const token =
+          typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
-      // ✅ 0) Loyalty: if user chose a free product, redeem 100 pts in backend
-      if (canRedeemFreeProduct && freeProductId) {
-        if (!token) {
-          toast({
-            title: language === "ar" ? "غير مسجل" : "Not logged in",
-            description:
-                language === "ar"
-                    ? "الرجاء تسجيل الدخول لاستخدام نقاط الولاء والحصول على المنتج المجاني."
-                    : "Please log in to use loyalty points and get a free product.",
-            variant: "destructive",
-          });
-          return; // ⛔ stop checkout
-        }
+      // loyalty free product logic...
+      // (keep as is)
 
-        try {
-          const res = await fetch(
-              "https://kewi.ps/user/loyalty/redeem-free-product",
-              {
-                method: "PATCH",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${token}`,
-                },
-              }
-          );
-
-          if (!res.ok) {
-            const errData = await res.json().catch(() => null);
-            throw new Error(
-                errData?.message ||
-                (language === "ar"
-                    ? "فشل في استخدام النقاط للحصول على المنتج المجاني"
-                    : "Failed to use loyalty points for the free product")
-            );
-          }
-
-          const result = await res.json();
-          console.log("redeem-free-product result:", result);
-
-          // 🔹 Sync frontend points (context subtracts 100)
-          redeemFreeProduct();
-        } catch (err: any) {
-          console.error("Error redeeming free product:", err);
-          toast({
-            title: language === "ar" ? "خطأ" : "Error",
-            description:
-                err?.message ||
-                (language === "ar"
-                    ? "فشل في استخدام النقاط للحصول على المنتج المجاني"
-                    : "Failed to redeem free product with points."),
-            variant: "destructive",
-          });
-          return; // ⛔ don't continue with checkout if redemption failed
-        }
-      }
-
-      // ✅ 1) Build products array (shared between purchase + WhatsApp)
+      // ✅ productsPayload, numOfItems, totals
       const productsPayload = cart.map((item) => {
-        const { mainPrice } = getPricesForItem(item); // unit price
+        const { mainPrice } = getPricesForItem(item);
         return {
-          productId: item._id,           // REAL Mongo product _id
-          id: item.id,                   // composite id (product+variant) if used
+          productId: item._id,
+          id: item.id,
           name: getItemName(item),
           quantity: item.quantity || 1,
           color: (item as any).color || "",
           variantId: (item as any).variantId || null,
-          price: mainPrice,              // unit price for purchase
-          unitPrice: mainPrice,          // unit price for WhatsApp
+          price: mainPrice,
+          unitPrice: mainPrice,
         };
       });
 
-      // ✅ Total number of items
       const numOfItems = cart.reduce(
           (sum, item) => sum + (item.quantity || 1),
           0
       );
 
-      // ✅ Totals (بدون / مع توصيل)
       const totalWithoutDelivery = Number(total.toFixed(2));
       const totalWithDelivery = Number(grandTotal.toFixed(2));
 
@@ -392,12 +465,13 @@ const Cart = () => {
         toast({
           title: "رقم الهاتف غير صالح",
           description: "رقم الهاتف يجب أن لا يقل عن 10 أرقام",
-          variant: "destructive"
+          variant: "destructive",
         });
+        setLoading(false);
         return;
       }
 
-      // ✅ 2) Send purchase to backend (addPurchase)
+      // Shared purchase body (we might use it differently for each method)
       const purchaseBody = {
         cName: formData.name,
         cNumber: formData.phone,
@@ -407,69 +481,39 @@ const Cart = () => {
         notes: formData.notes,
         products: productsPayload,
         totalPrice: totalWithoutDelivery,
-        // just a flag that some kind of discount was used (free product or %)
         discount: !!(freeProductId || applyDiscount),
         numOfItems,
-        paymentMethod: formData.paymentMethod
+        paymentMethod: formData.paymentMethod,
       };
 
-      const purchaseRes = await fetch("https://kewi.ps/user/purchase", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(purchaseBody),
-      });
-
-      if (!purchaseRes.ok) {
-        const errData = await purchaseRes.json().catch(() => null);
-        throw new Error(errData?.message || "فشل في إرسال الطلب");
+      // 🔥 Now branch by payment method:
+      if (formData.paymentMethod === "cash") {
+        // CASH ON DELIVERY FLOW (keep your existing logic)
+        await handleCashOnDeliveryCheckout(purchaseBody, token, {
+          totalWithoutDelivery,
+          totalWithDelivery,
+          numOfItems,
+          productsPayload,
+        });
+      } else if (formData.paymentMethod === "visa") {
+        await handleVisaCheckout({
+          purchaseBody,
+          token,
+          totalWithDelivery,
+          totalWithoutDelivery,
+          numOfItems,
+          productsPayload,
+        });
+      } else {
+        toast({
+          title: language === "ar" ? "خطأ في الدفع" : "Payment error",
+          description:
+              language === "ar"
+                  ? "يرجى اختيار طريقة دفع صحيحة"
+                  : "Please select a valid payment method.",
+          variant: "destructive",
+        });
       }
-
-      // ✅ 4) Send WhatsApp message (sendWhatsAppMessage)
-      const whatsappBody = {
-        cName: formData.name,
-        cNumber: formData.phone,
-        cAddress: formData.city,           // في الرسالة كـ "المدينة"
-        cCity: formData.address || "",     // في الرسالة كـ "المنطقة"
-        notes: formData.notes,
-        price: totalWithDelivery,          // المبلغ مع التوصيل
-        totalPrice: totalWithoutDelivery,  // المستعمل حالياً في الرسالة
-        numOfItems,
-        delivery: normalizeDelivery(selectedType),
-        type: isWholesalerUser ? "تاجر" : "زبون",
-        products: productsPayload,         // يحتوي على color + variantId + unitPrice
-      };
-
-      const waRes = await fetch(
-          "https://kewi.ps/user/purchase/send-whatsapp",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(whatsappBody),
-          }
-      );
-
-      if (!waRes.ok) {
-        const waErr = await waRes.json().catch(() => null);
-        throw new Error(waErr?.message || "فشل في إرسال رسالة واتساب");
-      }
-
-      // ✅ 5) Clear cart + reset UI
-      updateCart([]);
-      setCheckoutOpen(false);
-      setFreeProductId(null);
-      setApplyDiscount(false);
-      setFormData({ name: "", phone: "", address: "", city: "", notes: "" });
-      setSelectedRegion("");
-      setSelectedType("");
-      setDeliveryPrice(0);
-
-      toast({
-        title: t("toast.orderPlaced"),
-        description: t("toast.orderDesc"),
-      });
     } catch (err: any) {
       console.error("Error sending order:", err);
       toast({
@@ -482,13 +526,98 @@ const Cart = () => {
         variant: "destructive",
       });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   };
 
+
   const handleSelectFreeProduct = (productId: string) => {
-    setFreeProductId(productId);
-    setApplyDiscount(false); // Can't use both
+    const pointsCost = FREE_PRODUCT_POINTS_COST;
+
+    if (points < pointsCost) {
+      toast({
+        title: language === "ar" ? "نقاط غير كافية" : "Not enough points",
+        description:
+            language === "ar"
+                ? `تحتاج ${pointsCost} نقطة للحصول على المنتج المجاني`
+                : `You need ${pointsCost} points to get the free product.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!token) {
+      toast({
+        title: language === "ar" ? "غير مسجل" : "Not logged in",
+        description:
+            language === "ar"
+                ? "الرجاء تسجيل الدخول لاستخدام نقاط الولاء"
+                : "Please log in to use your loyalty points.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // ✅ Store temporarily and open modal
+    setPendingFreeProductId(productId);
+    setConfirmFreeProductOpen(true);
+  };
+  const handleConfirmFreeProduct = async () => {
+    if (!pendingFreeProductId) return;
+
+    const pointsCost = FREE_PRODUCT_POINTS_COST;
+
+    try {
+      const res = await fetch(
+          "https://kewi.ps/user/loyalty/redeem-discount",
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ pointsCost }),
+          }
+      );
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(
+            errData?.message ||
+            (language === "ar"
+                ? "فشل في استخدام النقاط"
+                : "Failed to use loyalty points")
+        );
+      }
+
+      // ✅ Deduct locally
+      spendPoints(pointsCost);
+
+      // ✅ Apply free product
+      setFreeProductId(pendingFreeProductId);
+      setApplyDiscount(false);
+      setAppliedDiscountPercentage(null);
+
+      setConfirmFreeProductOpen(false);
+      setPendingFreeProductId(null);
+
+      toast({
+        title:
+            language === "ar"
+                ? "تم تطبيق المنتج المجاني"
+                : "Free product applied",
+        description:
+            language === "ar"
+                ? `تم خصم ${pointsCost} نقطة من رصيدك`
+                : `${pointsCost} points were deducted from your balance.`,
+      });
+    } catch (err: any) {
+      toast({
+        title: language === "ar" ? "خطأ" : "Error",
+        description: err?.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const handleApplyPercentDiscountClick = () => {
@@ -561,7 +690,6 @@ const Cart = () => {
       }
 
       const result = await res.json();
-      console.log("redeem-discount result:", result);
 
       // 🔹 Update local state (loyalty + applied discount)
       spendPoints(pointsCost);
@@ -1074,6 +1202,28 @@ const Cart = () => {
                 {language === "ar" ? "إلغاء" : "Cancel"}
               </AlertDialogCancel>
               <AlertDialogAction onClick={handleConfirmDiscountApply}>
+                {language === "ar" ? "تأكيد" : "Confirm"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        <AlertDialog open={confirmFreeProductOpen} onOpenChange={setConfirmFreeProductOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {language === "ar" ? "تأكيد استخدام النقاط" : "Confirm points usage"}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {language === "ar"
+                    ? `هل أنت متأكد أنك تريد استخدام ${FREE_PRODUCT_POINTS_COST} نقطة للحصول على المنتج مجاناً؟`
+                    : `Are you sure you want to use ${FREE_PRODUCT_POINTS_COST} points to get this product for free?`}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>
+                {language === "ar" ? "إلغاء" : "Cancel"}
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmFreeProduct}>
                 {language === "ar" ? "تأكيد" : "Confirm"}
               </AlertDialogAction>
             </AlertDialogFooter>

@@ -567,7 +567,10 @@ const AdminOrders = () => {
                       <p><strong>City:</strong> {selectedOrder.city}</p>
                       <p><strong>Address:</strong> {selectedOrder.streetAddress}</p>
                       <p><strong>Delivery:</strong> {selectedOrder.deliveryType}</p>
-                      {selectedOrder.notes && (
+                      {selectedOrder?.paymentMethod && (
+                          <p><strong>Payment Method:</strong> {selectedOrder?.paymentMethod}</p>
+                      )}
+                      {selectedOrder?.notes && (
                           <p><strong>Notes:</strong> {selectedOrder.notes}</p>
                       )}
                     </div>

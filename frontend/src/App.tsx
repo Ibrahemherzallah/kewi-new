@@ -29,6 +29,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import SignUp from "./pages/SignUp";
 import Profile from "./pages/Profile";
 import DeliveryTerms from "@/pages/DeliveryTerms.tsx";
+import PaymentCallback from "./pages/PaymentCallback";
 const queryClient = new QueryClient();
 
 // Language, theme, loyalty, and favorites providers configured
@@ -53,6 +54,7 @@ const App = () => (
                     <Route path="/signup" element={<SignUp />} />
                     <Route path="/cart" element={<Cart />} />
                     <Route path="/favorites" element={<Favorites />} />
+                    <Route path="/payment-callback" element={<PaymentCallback />} />
                     <Route
                         path="/purchase-history"
                         element={
