@@ -69,7 +69,13 @@ const purchaseSchema = new mongoose.Schema({
   stockDeducted: {
     type: Boolean,
     default: false
-  }
+  },
+  paymentMethod: {
+    type: String,
+    enum: ["visa", 'cash'],
+    default: 'cash',
+  },
+
 }, { timestamps: true });
 
 const Purchase = mongoose.model("Purchase", purchaseSchema);

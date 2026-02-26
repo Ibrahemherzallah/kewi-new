@@ -4,10 +4,39 @@ import User from "../models/users.model.js";
 import mongoose from "mongoose";
 import twilio from 'twilio';
 import dotenv from 'dotenv';
+import axios from "axios";
 dotenv.config();
 
 
+const attachPurchaseToUser = async (purchase, req) => {
+    try {
+        let user = null;
 
+        if (req.userId) {
+            user = await User.findByIdAndUpdate(
+                req.userId,
+                { $push: { orderHistory: purchase._id } },
+                { new: true }
+            );
+        } else {
+            user = await User.findOneAndUpdate(
+                { phone: purchase.phoneNumber },
+                { $push: { orderHistory: purchase._id } },
+                { new: true }
+            );
+        }
+
+        if (user) {
+            console.log(
+                `Added purchase ${purchase._id} to user ${user._id} orderHistory`
+            );
+        } else {
+            console.log("Guest checkout – no matching user.");
+        }
+    } catch (err) {
+        console.error("Error updating user order history:", err);
+    }
+};
 
 export const getPurchase = async (req, res) => {
     try {
@@ -43,38 +72,7 @@ export const addPurchase = async (req, res) => {
         await newPurchase.save();
 
         // 🆕 If this purchase belongs to a logged-in user, add to their order history
-        try {
-            let user = null;
-
-            // Prefer req.userId from JWT (route protected by requireAuth)
-            if (req.userId) {
-                user = await User.findByIdAndUpdate(
-                    req.userId,
-                    { $push: { orderHistory: newPurchase._id } },
-                    { new: true }
-                );
-            } else {
-                // Optional fallback: try to match by phone number
-                user = await User.findOneAndUpdate(
-                    { phone: cNumber },
-                    { $push: { orderHistory: newPurchase._id } },
-                    { new: true }
-                );
-            }
-
-            if (user) {
-                console.log(
-                    `Added purchase ${newPurchase._id} to user ${user._id} orderHistory`
-                );
-            } else {
-                console.log(
-                    "No matching user found for this purchase (guest checkout or phone not registered)."
-                );
-            }
-        } catch (userErr) {
-            console.error("Error updating user order history:", userErr);
-            // don't fail the whole request if just history update fails
-        }
+        await attachPurchaseToUser(newPurchase, req);
 
         res.status(201).json({
             message: "تم إضافة الشراء بنجاح",
@@ -458,10 +456,71 @@ export const updateStock = async (req, res) => {
 };
 
 
-
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
+
+export const sendWhatsappOrder = async (order) => {
+    try {
+        if (!order) {
+            throw new Error("Order is required for WhatsApp sending");
+        }
+        const {
+            fullName: cName,
+            phoneNumber: cNumber,
+            streetAddress: cAddress,
+            city: cCity,
+            notes,
+            totalPrice,
+            delivery,
+            products,
+            numOfItems,
+            paymentMethod,
+        } = order;
+
+        // ✅ Format products
+        const productsMessage = products
+            .map(
+                (p, index) => `
+🛒 المنتج ${index + 1}:
+- معرف المنتج: ${p.productId}
+- الكمية: ${p.quantity}
+- اللون: ${p.color || "غير محدد"}
+- السعر: ${p.unitPrice || "غير محدد"}
+`
+            )
+            .join("\n");
+
+        const message = `
+📦 طلب جديد (تم الدفع بنجاح)
+
+👤 الاسم: ${cName}
+📞 رقم الهاتف: ${cNumber}
+🏙️ المدينة: ${cAddress}
+📍 المنطقة: ${cCity}
+📝 ملاحظات: ${notes || "لا يوجد"}
+💳 طريقة الدفع: ${paymentMethod}
+🧾 عدد المنتجات: ${numOfItems}
+💰 السعر الإجمالي: ${totalPrice}
+🚚 التوصيل: ${delivery}
+
+${productsMessage}
+`;
+
+        const response = await client.messages.create({
+            from: `whatsapp:${process.env.TWILIO_WHATSAPP_FROM}`,
+            to: "whatsapp:+972597250539",
+            body: message,
+        });
+
+        console.log("WhatsApp sent. SID:", response.sid);
+
+        return true;
+    } catch (error) {
+        console.error("WhatsApp sending failed:", error.message);
+        return false;
+    }
+};
 
 export const sendWhatsAppMessage = async (req, res) => {
     const { cName, cNumber, cAddress, notes, cCity, price, numOfItems, delivery, products, type, totalPrice } = req.body;
@@ -530,34 +589,124 @@ export const deleteOrder = async (req, res) => {
 };
 
 
-// e.g. userPaymentController.js
-export const createPaymentSession = async (req, res) => {
+export const verifyLahzaPayment = async (req, res) => {
     try {
-        const { orderId, amount } = req.body;
-        const userId = req.userId; // from your auth middleware
+        const { reference, purchaseBody } = req.body;
 
-        // TODO: validate order, amount, ownership, etc.
+        if (!reference) {
+            return res.status(400).json({ message: "Reference is required" });
+        }
+        const actualOrder = purchaseBody; // 🔥 FIX
+        // 1️⃣ Verify with Lahza
+        const verifyUrl = `https://api.lahza.io/transaction/verify/${reference}`;
 
-        // TODO: call Bank of Palestine API here:
-        // const response = await axios.post("https://bank-palestine-api/.../createPayment", {
-        //   amount,
-        //   currency: "ILS",
-        //   orderId,
-        //   returnUrl: "https://your-domain.com/payment/success",
-        //   notifyUrl: "https://your-backend.com/payment/webhook"
-        //   ...
-        // });
+        const response = await axios.get(verifyUrl, {
+            headers: {
+                Authorization: `Bearer ${process.env.LAHZA_SECRET_KEY}`,
+                "Cache-Control": "no-cache",
+            },
+        });
 
-        // Example:
-        // const paymentUrl = response.data.paymentUrl;
+        const data = response.data;
 
-        const paymentUrl = "https://bank-of-palestine-demo-url.com/payment"; // placeholder
+        if (data.data?.status !== "success") {
+            return res.status(400).json({
+                message: "Payment not successful",
+            });
+        }
 
-        res.json({ paymentUrl });
+        // ✅ 2️⃣ Create Order AFTER success
+        const newPurchase = new Purchase({
+            fullName: actualOrder.cName,
+            phoneNumber: actualOrder.cNumber,
+            streetAddress: actualOrder.cAddress,
+            city: actualOrder.cCity,
+            deliveryType: actualOrder.delivery,
+            notes: actualOrder.notes,
+            products: actualOrder.products,
+            totalPrice: actualOrder.totalPrice,
+            price: actualOrder.totalPrice,
+            discount: actualOrder.discount,
+            numOfItems: actualOrder.numOfItems,
+            paymentMethod: "visa",
+        });
+
+        await newPurchase.save();
+        await attachPurchaseToUser(newPurchase, req);
+        // ✅ 3️⃣ Send WhatsApp
+        await sendWhatsappOrder(newPurchase);
+
+        return res.json({
+            message: "Payment successful and order created",
+        });
     } catch (err) {
-        console.error("Error creating payment session:", err);
-        res.status(500).json({
-            message: "Failed to create payment session",
+        console.error("Verify error:", err.response?.data || err.message);
+        return res.status(500).json({
+            message: "Verification failed",
+        });
+    }
+};
+export const initLahzaPayment = async (req, res) => {
+    try {
+        const { amountILS, email, mobile, ref } = req.body;
+        console.log("amountILS : " , amountILS)
+        console.log("email : " , email)
+        console.log("mobile : " , mobile)
+        console.log("ref : " , ref)
+        // 1) Basic validation
+        if (!amountILS || !mobile) {
+            return res.status(400).json({ message: "amountILS and mobile are required" });
+        }
+
+        // 2) Convert to lowest unit (agora) → amount * 100
+        const amountInAgora = Math.round(Number(amountILS) * 100);
+
+        // 3) Build the fields exactly like Lahza docs (x-www-form-urlencoded)
+        const fields = new URLSearchParams({
+            amount: String(amountInAgora),
+            mobile: mobile,
+            email: email || "",   // can be empty
+            callback_url: "https://kewi.ps/payment-callback",
+            ...(ref ? { ref } : {}), // your own reference (optional but recommended)
+            // currency: "ILS", // only if you want to force it, otherwise Lahza default
+        });
+        console.log("fields : " , fields)
+
+        const url = "https://api.lahza.io/transaction/initialize";
+
+        const response = await axios.post(url, fields.toString(), {
+            headers: {
+                "Authorization": `Bearer ${process.env.LAHZA_SECRET_KEY}`,
+                "Cache-Control": "no-cache",
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+        });
+
+        // The exact shape depends on Lahza; usually something like:
+        // response.data.data.authorization_url or similar.
+        // For now, we’ll assume response.data.data.authorization_url:
+        const data = response.data;
+        console.log("Lahza init response:", data);
+
+        // TODO: adjust this line according to the real response field:
+        const authUrl = data.data?.authorization_url || data.authorization_url;
+
+        if (!authUrl) {
+            return res.status(500).json({
+                message: "Failed to create payment session (no authorization URL)",
+                raw: data,
+            });
+        }
+
+        return res.json({
+            authorizationUrl: authUrl,
+            lahzaReference: data.data?.reference || data.reference,
+        });
+    } catch (err) {
+        console.error("Error initializing Lahza payment:", err.response?.data || err.message);
+        return res.status(500).json({
+            message: "Failed to initialize payment",
+            error: err.response?.data || err.message,
         });
     }
 };
