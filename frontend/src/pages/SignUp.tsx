@@ -23,7 +23,7 @@ const SignUp = () => {
         e.preventDefault();
 
         try {
-            const res = await fetch("https://kewi.ps/auth/signup", {
+            const res = await fetch("https://kewi.ps/auth/api/signup", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

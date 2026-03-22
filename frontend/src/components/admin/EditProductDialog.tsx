@@ -25,9 +25,9 @@ import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "@/firebase.ts";
 
 const API_BASE = import.meta.env.VITE_API_URL || "https://kewi.ps";
-const CATEGORIES_API = `${API_BASE}/admin/categories`;
+const CATEGORIES_API = `${API_BASE}/admin/api/categories`;
 const BRANDS_API = `${API_BASE}/admin/brands`;
-const PRODUCTS_API = `${API_BASE}/admin/products`;
+const PRODUCTS_API = `${API_BASE}/admin/api/products`;
 
 type Category = {
     _id: string;

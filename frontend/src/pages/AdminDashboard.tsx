@@ -32,7 +32,7 @@ const AdminDashboard = () => {
     const fetchStats = async () => {
       try {
         const res = await axios.get(
-            "https://kewi.ps/admin/dashboard-stats",
+            "https://kewi.ps/admin/api/dashboard-stats",
             {
               headers: {
                 Authorization: `Bearer ${token}`,

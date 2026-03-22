@@ -77,22 +77,31 @@ export const updateWholesaler = async (req, res) => {
         const { id } = req.params;
         const { userName, password, phone, address, isWholesaler } = req.body;
 
-        // Validate phone number length
         if (phone && phone.length < 10) {
             return res.status(400).json({ error: "Phone number must be at least 10 digits long" });
         }
 
-        // Check if the new username already exists (excluding the current user)
         if (userName) {
-            const existingUser = await User.findOne({ userName });
+            const existingUser = await User.findOne({ userName, role: "wholesaler" });
             if (existingUser && existingUser._id.toString() !== id) {
-                return res.status(400).json({ error: "Username already exists" });
+                return res.status(400).json({ error: "Wholesaler username already exists" });
             }
         }
 
-        let updateData = { userName, phone, address, isWholesaler };
+        if (phone) {
+            const existingPhone = await User.findOne({ phone, role: "wholesaler" });
+            if (existingPhone && existingPhone._id.toString() !== id) {
+                return res.status(400).json({ error: "Wholesaler phone already in use" });
+            }
+        }
 
-        // If a password is provided, hash it before updating
+        const updateData = {
+            userName,
+            phone,
+            address,
+            isWholesaler,
+        };
+
         if (password) {
             if (password.length < 8) {
                 return res.status(400).json({ error: "Password must be at least 8 characters long" });
@@ -101,7 +110,11 @@ export const updateWholesaler = async (req, res) => {
             updateData.password = await bcrypt.hash(password, salt);
         }
 
-        const updatedWholesaler = await User.findByIdAndUpdate(id, updateData, { new: true });
+        const updatedWholesaler = await User.findOneAndUpdate(
+            { _id: id, role: "wholesaler" },
+            updateData,
+            { new: true, runValidators: true }
+        );
 
         if (!updatedWholesaler) {
             return res.status(404).json({ error: "Wholesaler not found" });

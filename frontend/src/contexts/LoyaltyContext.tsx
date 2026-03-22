@@ -59,7 +59,7 @@ export const LoyaltyProvider: React.FC<{ children: React.ReactNode }> = ({childr
 
         const fetchMe = async () => {
             try {
-                const res = await fetch(`${API_BASE}/admin/me`, {
+                const res = await fetch(`${API_BASE}/admin/api/me`, {
                     headers: {
                         Authorization: `Bearer ${token}`,
                     },

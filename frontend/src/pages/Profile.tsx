@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import {Package, LogOut, ShoppingBag, User, Gift, Percent, Star,} from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_URL || "https://kewi.ps";
-const PROFILE_API = `${API_BASE}/admin/me`;
+const PROFILE_API = `${API_BASE}/admin/api/me`;
 
 interface UserData {
     id: string;

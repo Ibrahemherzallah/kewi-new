@@ -42,7 +42,7 @@ export const AddWholesalerDialog = () => {
   const { data: users = [], isLoading: loadingUsers } = useQuery({
     queryKey: ["admin-users-for-wholesaler"],
     queryFn: async () => {
-      const res = await fetch("https://kewi.ps/admin/wholesalers");
+      const res = await fetch("https://kewi.ps/admin/api/wholesalers");
       const data = await res.json();
       return Array.isArray(data) ? data : [];
     },
@@ -90,7 +90,7 @@ export const AddWholesalerDialog = () => {
     try {
       setSubmitting(true);
 
-      const res = await fetch("https://kewi.ps/admin/wholesalers", {
+      const res = await fetch("https://kewi.ps/admin/api/wholesalers", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

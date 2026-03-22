@@ -17,8 +17,8 @@ import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "@/firebase.ts";
 
 const API_BASE = import.meta.env.VITE_API_URL
-    ? `${import.meta.env.VITE_API_URL}/admin/categories`
-    : "https://kewi.ps/admin/categories";
+    ? `${import.meta.env.VITE_API_URL}/admin/api/categories`
+    : "https://kewi.ps/admin/api/categories";
 
 export const EditCategoryDialog = ({open, setOpen, category, onUpdated,}: {
     open: boolean;

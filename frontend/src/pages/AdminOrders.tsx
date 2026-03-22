@@ -290,7 +290,7 @@ const AdminOrders = () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`${API_BASE}/admin/purchase`, {
+        const res = await fetch(`${API_BASE}/admin/api/purchase`, {
           method: "GET",
         });
 
@@ -333,7 +333,7 @@ const AdminOrders = () => {
         return;
       }
 
-      const res = await fetch(`${API_BASE}/user/purchase/${orderId}/status`, {
+      const res = await fetch(`${API_BASE}/user/api/purchase/${orderId}/status`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -364,7 +364,7 @@ const AdminOrders = () => {
     if (!confirm("Are you sure you want to delete this order?")) return;
 
     try {
-      const res = await fetch(`https://kewi.ps/admin/orders/${orderId}`, {
+      const res = await fetch(`https://kewi.ps/admin/api/orders/${orderId}`, {
         method: "DELETE",
       });
 
