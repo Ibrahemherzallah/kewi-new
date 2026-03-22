@@ -17,7 +17,7 @@ import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "@/firebase";
 
 const API_BASE = import.meta.env.VITE_API_URL || "https://kewi.ps";
-const BRANDS_API = `${API_BASE}/admin/brands`;
+const BRANDS_API = `${API_BASE}/admin/api/brands`;
 
 export type Brand = {
     _id: string;

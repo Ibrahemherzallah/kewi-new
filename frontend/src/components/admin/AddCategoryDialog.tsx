@@ -114,7 +114,7 @@ export const AddCategoryDialog: React.FC<AddCategoryDialogProps> = ({
         image: imageUrl || "", // 🔴 here we send the Firebase URL to BE
       };
 
-      const res = await fetch('https://kewi.ps/admin/categories', {
+      const res = await fetch('https://kewi.ps/admin/api/categories', {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

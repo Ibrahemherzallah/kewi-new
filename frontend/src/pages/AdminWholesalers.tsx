@@ -5,15 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Search, Building2, User2 } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow,} from "@/components/ui/table";
 import { AddWholesalerDialog } from "@/components/admin/AddWholesalerDialog";
+import { EditWholesalerDialog } from "@/components/admin/EditWholesalerDialog";
 
 // Check if DOB matches today's date
 const isBirthdayToday = (dob?: string) => {
@@ -35,7 +29,7 @@ const AdminWholesaler = () => {
   const { data: usersData = [], isLoading: loadingUsers } = useQuery({
     queryKey: ["admin-users"],
     queryFn: async () => {
-      const res = await fetch("https://kewi.ps/admin/users");
+      const res = await fetch("https://kewi.ps/admin/api/users");
       const data = await res.json();
       return Array.isArray(data) ? data : [];
     },
@@ -45,7 +39,7 @@ const AdminWholesaler = () => {
   const { data: wholesalersData = [], isLoading: loadingWholesalers } = useQuery({
     queryKey: ["admin-wholesalers"],
     queryFn: async () => {
-      const res = await fetch("https://kewi.ps/admin/wholesalers");
+      const res = await fetch("https://kewi.ps/admin/api/wholesalers");
       const data = await res.json();
       return Array.isArray(data) ? data : [];
     },
@@ -161,7 +155,10 @@ const AdminWholesaler = () => {
                       {activeTab === "users" && <TableHead>Date of Birth</TableHead>}
                       <TableHead>Total Orders</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
+                      {
+                        activeTab === "wholesalers" && (
+                          <TableHead>Actions</TableHead>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -213,7 +210,9 @@ const AdminWholesaler = () => {
                             </TableCell>
 
                             <TableCell>
-                              <Button variant="outline" size="sm">Edit</Button>
+                              {activeTab === "wholesalers" && (
+                                  <EditWholesalerDialog wholesaler={item} />
+                              )}
                             </TableCell>
                           </TableRow>
                       );

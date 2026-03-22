@@ -136,7 +136,7 @@ app.get('/', async (req, res) => {
 app.get('/product/:id', async (req, res) => {
     const { id } = req.params;
     try {
-        const apiUrl = `${req.protocol}://${req.get('host')}/admin/products/${id}`;
+        const apiUrl = `${req.protocol}://${req.get('host')}/admin/api/products/${id}`;
         const r = await fetch(apiUrl);
         const product = await r.json();
 
@@ -155,7 +155,7 @@ app.get('/category/:id', async (req, res) => {
     const catNameFromQuery = req.query?.catName;
 
     try {
-        const apiUrl = `${req.protocol}://${req.get('host')}/admin/products/category/${id}`;
+        const apiUrl = `${req.protocol}://${req.get('host')}/admin/api/products/category/${id}`;
         const r = await fetch(apiUrl);
         const products = await r.json();
 
@@ -181,17 +181,17 @@ app.get('/category/:id', async (req, res) => {
 app.use(express.static(staticPath));
 
 // ✅ API ROUTES (order does not matter after SEO)
-app.use('/admin', orderRoutes);
-app.use('/admin', brandRoutes);
-app.use('/admin', categoryRoutes);
-app.use('/admin', productRoutes);
-app.use('/admin', wholesalerRoutes);
-app.use('/admin', usersRoutes);
-app.use('/admin', adminDashboardRoutes);
-app.use('/auth', authRoutes);
-app.use('/user', homeRoutes);
-app.use('/user', userProductRoutes);
-app.use('/user', userProductRoutes);
+app.use('/admin/api', orderRoutes);
+app.use('/admin/api', brandRoutes);
+app.use('/admin/api', categoryRoutes);
+app.use('/admin/api', productRoutes);
+app.use('/admin/api', wholesalerRoutes);
+app.use('/admin/api', usersRoutes);
+app.use('/admin/api', adminDashboardRoutes);
+app.use('/auth/api', authRoutes);
+app.use('/user/api', homeRoutes);
+app.use('/user/api', userProductRoutes);
+app.use('/user/api', userProductRoutes);
 
 // ✅ CATCH-ALL MUST BE LAST
 app.get('*', (req, res) => {

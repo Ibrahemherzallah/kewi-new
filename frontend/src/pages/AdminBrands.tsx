@@ -19,7 +19,7 @@ import { EditBrandDialog, Brand } from "@/components/admin/EditBrandDialog";
 import { useToast } from "@/hooks/use-toast";
 
 const API_BASE = import.meta.env.VITE_API_URL || "https://kewi.ps";
-const BRANDS_API = `${API_BASE}/admin/brands`;
+const BRANDS_API = `${API_BASE}/admin/api/brands`;
 
 const AdminBrands = () => {
   const [search, setSearch] = useState("");

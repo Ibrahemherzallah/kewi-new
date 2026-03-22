@@ -31,7 +31,7 @@ const Login = () => {
     }
 
     try {
-      const res = await fetch("https://kewi.ps/auth/login", {
+      const res = await fetch("https://kewi.ps/auth/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

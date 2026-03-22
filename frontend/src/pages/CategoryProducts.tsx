@@ -10,9 +10,9 @@ import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue,} from "@/
 
 const API_BASE = import.meta.env.VITE_API_URL || "https://kewi.ps";
 const CATEGORY_PRODUCTS_API = (id: string) =>
-    `${API_BASE}/admin/products/category/${id}`;
-const CATEGORIES_API = `${API_BASE}/admin/categories`;
-const BRANDS_API = `${API_BASE}/admin/brands`;
+    `${API_BASE}/admin/api/products/category/${id}`;
+const CATEGORIES_API = `${API_BASE}/admin/api/categories`;
+const BRANDS_API = `${API_BASE}/admin/api/brands`;
 
 type ApiProduct = {
     _id: string;

@@ -107,7 +107,7 @@ const PurchaseHistory = () => {
           return;
         }
 
-        const res = await fetch(`${API_BASE}/admin/purchase/my`, {
+        const res = await fetch(`${API_BASE}/admin/api/purchase/my`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -184,7 +184,7 @@ const PurchaseHistory = () => {
         return;
       }
       console.log("token is: ", token)
-      const res = await fetch(`${API_BASE}/user/purchase/${orderId}/status`, {
+      const res = await fetch(`${API_BASE}/user/api/purchase/${orderId}/status`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
