@@ -1,7 +1,7 @@
 // src/contexts/LoyaltyContext.tsx
 import React, {createContext, useContext, useState, useEffect, useCallback,} from "react";
 
-const API_BASE = "https://kewi.ps"; // same as you use elsewhere
+const API_BASE = import.meta.env.VITE_ENV || "https://kewi.ps";
 
 interface LoyaltyContextType {
     points: number;

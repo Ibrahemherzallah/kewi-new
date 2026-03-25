@@ -24,7 +24,7 @@ import imageCompression from "browser-image-compression";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "@/firebase.ts";
 
-const API_BASE = import.meta.env.VITE_API_URL || "https://kewi.ps";
+const API_BASE = import.meta.env.VITE_ENV || "https://kewi.ps";
 const CATEGORIES_API = `${API_BASE}/admin/api/categories`;
 const BRANDS_API = `${API_BASE}/admin/brands`;
 const PRODUCTS_API = `${API_BASE}/admin/api/products`;
@@ -77,12 +77,7 @@ type EditProductDialogProps = {
 
 type ProductStatus = "normal" | "soldOut" | "onSale" | "soon";
 
-export const EditProductDialog: React.FC<EditProductDialogProps> = ({
-                                                                        open,
-                                                                        onOpenChange,
-                                                                        product,
-                                                                        onUpdated,
-                                                                    }) => {
+export const EditProductDialog: React.FC<EditProductDialogProps> = ({open, onOpenChange, product, onUpdated,}) => {
     const { toast } = useToast();
 
     const [categories, setCategories] = useState<Category[]>([]);
@@ -91,6 +86,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
     const [imagePreviews, setImagePreviews] = useState<string[]>([]);
     const [uploadingImages, setUploadingImages] = useState(false);
     const [saving, setSaving] = useState(false);
+    const token = localStorage.getItem("token");
 
     const [isMultiColor, setIsMultiColor] = useState<boolean>(
         !!product.isMultiColor
@@ -465,6 +461,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify(payload),
             });

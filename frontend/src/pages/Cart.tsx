@@ -305,7 +305,7 @@ const Cart = () => {
     const { totalWithoutDelivery, totalWithDelivery, numOfItems, productsPayload } = extras;
 
     // 1) create purchase
-    const purchaseRes = await fetch("https://kewi.ps/user/api/purchase", {
+    const purchaseRes = await fetch(`${import.meta.env.VITE_ENV}/user/api/purchase`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -334,7 +334,7 @@ const Cart = () => {
       products: productsPayload,
     };
 
-    const waRes = await fetch("https://kewi.ps/user/api/purchase/send-whatsapp", {
+    const waRes = await fetch(`${import.meta.env.VITE_ENV}/user/api/purchase/send-whatsapp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(whatsappBody),
@@ -371,7 +371,7 @@ const Cart = () => {
 
       // ✅ Initialize Lahza ONLY
       const res = await fetch(
-          "https://kewi.ps/user/api/payments/lahza/init",
+          `${import.meta.env.VITE_ENV}/user/api/payments/lahza/init`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -569,7 +569,7 @@ const Cart = () => {
 
     try {
       const res = await fetch(
-          "https://kewi.ps/user/api/loyalty/redeem-discount",
+          `${import.meta.env.VITE_ENV}/user/api/loyalty/redeem-discount`,
           {
             method: "PATCH",
             headers: {
@@ -668,7 +668,7 @@ const Cart = () => {
       }
 
       const res = await fetch(
-          "https://kewi.ps/user/api/loyalty/redeem-discount",
+          `${import.meta.env.VITE_ENV}/user/api/loyalty/redeem-discount`,
           {
             method: "PATCH",
             headers: {

@@ -14,7 +14,7 @@ import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "@/firebase.ts";
 
 // API base helpers
-const API_BASE = import.meta.env.VITE_API_URL || "https://kewi.ps";
+const API_BASE = import.meta.env.VITE_ENV || "https://kewi.ps";
 const CATEGORIES_API = `${API_BASE}/admin/api/categories`;
 const BRANDS_API = `${API_BASE}/admin/api/brands`;
 const PRODUCTS_API = `${API_BASE}/admin/api/products`;
@@ -41,15 +41,14 @@ type ColorVariant = {
 
 type StatusKey = "isSoldOut" | "isOnSale" | "isSoon";
 
-export const AddProductDialog: React.FC<AddProductDialogProps> = ({
-                                                                    onProductCreated,
-                                                                  }) => {
+export const AddProductDialog: React.FC<AddProductDialogProps> = ({onProductCreated,}) => {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
 
   // dropdown data
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
+  const token = localStorage.getItem("token");
 
   // image state
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
@@ -373,6 +372,7 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });

@@ -8,7 +8,7 @@ import { Search } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const API_BASE = import.meta.env.VITE_API_URL || "https://kewi.ps";
+const API_BASE = import.meta.env.VITE_ENV || "https://kewi.ps";
 const PRODUCTS_API = `${API_BASE}/admin/api/products`;
 const CATEGORIES_API = `${API_BASE}/admin/api/categories`;
 

@@ -1,5 +1,6 @@
 import User from "../models/users.model.js";
 import bcrypt from "bcryptjs";
+import mongoose from "mongoose";
 
 export const addWholesaler = async (req, res) => {
     try {
@@ -16,10 +17,10 @@ export const addWholesaler = async (req, res) => {
             return res.status(400).json({ error: "Wholesaler username already exists" });
         }
 
-        const phoneExists = await User.findOne({phone, role: "wholesaler"});
+        const phoneExists = await User.findOne({phone});
 
         if (phoneExists) {
-            return res.status(400).json({ error: "Wholesaler phone already in use" });
+            return res.status(400).json({ error: "phone already in use" });
         }
 
         const salt = await bcrypt.genSalt(10);
@@ -56,10 +57,19 @@ export const addWholesaler = async (req, res) => {
     }
 };
 
+
 export const deleteWholesaler = async (req, res) => {
     try {
         const { id } = req.params;
-        const deletedWholesaler = await User.findByIdAndDelete(id);
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ error: "Invalid wholesaler id" });
+        }
+
+        const deletedWholesaler = await User.findOneAndDelete({
+            _id: id,
+            role: "wholesaler",
+        });
 
         if (!deletedWholesaler) {
             return res.status(404).json({ error: "Wholesaler not found" });
@@ -71,6 +81,7 @@ export const deleteWholesaler = async (req, res) => {
         res.status(500).json({ error: "Internal Server Error" });
     }
 };
+
 
 export const updateWholesaler = async (req, res) => {
     try {

@@ -11,8 +11,8 @@ import { AddCategoryDialog } from "@/components/admin/AddCategoryDialog";
 import {EditCategoryDialog} from "@/components/admin/EditCategoryDialog.tsx";
 
 // 🔹 adjust this to your actual API base / route
-const CATEGORIES_API = import.meta.env.VITE_API_URL
-    ? `${import.meta.env.VITE_API_URL}/admin/api/categories`
+const CATEGORIES_API = import.meta.env.VITE_ENV
+    ? `${import.meta.env.VITE_ENV}/admin/api/categories`
     : "https://kewi.ps/admin/api/categories";
 
 type Category = {
@@ -34,6 +34,7 @@ const AdminCategories = () => {
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<Category | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const token = localStorage.getItem("token");
 
   const fetchCategories = async () => {
     try {
@@ -75,8 +76,12 @@ const AdminCategories = () => {
 
   const handleDelete = async (id: string) => {
     if (!confirm("هل أنت متأكد أنك تريد حذف هذا التصنيف؟")) return;
-
-    const res = await fetch(`${CATEGORIES_API}/${id}`, { method: "DELETE" });
+    const res = await fetch(`${CATEGORIES_API}/${id}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      }, });
     if (res.ok) fetchCategories();
   };
 

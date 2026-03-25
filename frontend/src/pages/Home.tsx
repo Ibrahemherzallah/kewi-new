@@ -18,7 +18,7 @@ import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 // 🔹 API base
-const API_BASE = import.meta.env.VITE_API_URL || "https://kewi.ps";
+const API_BASE = import.meta.env.VITE_ENV || "https://kewi.ps";
 const CATEGORIES_API = `${API_BASE}/admin/api/categories`;
 const PRODUCTS_API = `${API_BASE}/user/api/products`;
 

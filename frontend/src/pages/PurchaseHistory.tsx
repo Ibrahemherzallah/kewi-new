@@ -10,7 +10,7 @@ import {useLoyalty, calculatePotentialPoints,} from "@/contexts/LoyaltyContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
 
-const API_BASE = "https://kewi.ps";
+const API_BASE = import.meta.env.VITE_ENV || "https://kewi.ps";
 
 interface PurchaseProduct {
   productId: string;
