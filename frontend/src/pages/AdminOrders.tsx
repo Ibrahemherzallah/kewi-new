@@ -48,7 +48,7 @@ interface Purchase {
   deliveredAt?: string;
 }
 
-const API_BASE = "https://kewi.ps";
+const API_BASE = import.meta.env.VITE_ENV || "https://kewi.ps";
 
 const AdminOrders = () => {
   const [orders, setOrders] = useState<Purchase[]>([]);
@@ -63,6 +63,7 @@ const AdminOrders = () => {
   const { language } = useLanguage();
   // const [copied, setCopied] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const token = localStorage.getItem("token");
 
   const handleCopy = async (id: string) => {
     try {
@@ -292,6 +293,10 @@ const AdminOrders = () => {
       try {
         const res = await fetch(`${API_BASE}/admin/api/purchase`, {
           method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
         });
 
         if (!res.ok) {
@@ -318,8 +323,7 @@ const AdminOrders = () => {
 
   const handleUpdateStatus = async (orderId: string, action: "confirm" | "ship") => {
     try {
-      const token =
-          typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
       if (!token) {
         toast({
@@ -364,8 +368,12 @@ const AdminOrders = () => {
     if (!confirm("Are you sure you want to delete this order?")) return;
 
     try {
-      const res = await fetch(`https://kewi.ps/admin/api/orders/${orderId}`, {
+      const res = await fetch(`${import.meta.env.VITE_ENV}/admin/api/orders/${orderId}`, {
         method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (!res.ok) {

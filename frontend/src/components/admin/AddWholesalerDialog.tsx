@@ -28,6 +28,7 @@ export const AddWholesalerDialog = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [nameSearch, setNameSearch] = useState("");
+  const token = localStorage.getItem("token");
   const [formData, setFormData] = useState({
     userName: "",
     password: "",
@@ -42,7 +43,7 @@ export const AddWholesalerDialog = () => {
   const { data: users = [], isLoading: loadingUsers } = useQuery({
     queryKey: ["admin-users-for-wholesaler"],
     queryFn: async () => {
-      const res = await fetch("https://kewi.ps/admin/api/wholesalers");
+      const res = await fetch(`${import.meta.env.VITE_ENV}/admin/api/wholesalers`);
       const data = await res.json();
       return Array.isArray(data) ? data : [];
     },
@@ -90,10 +91,11 @@ export const AddWholesalerDialog = () => {
     try {
       setSubmitting(true);
 
-      const res = await fetch("https://kewi.ps/admin/api/wholesalers", {
+      const res = await fetch(`${import.meta.env.VITE_ENV}/admin/api/wholesalers`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(formData),
       });

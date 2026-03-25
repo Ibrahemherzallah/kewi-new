@@ -1,5 +1,5 @@
 import Product from "../models/product.model.js";
-import Purchase from "../models/product.model.js";
+import Purchase from "../models/purchase.model.js";
 import User from "../models/users.model.js";
 
 export const getAdminDashboardStats = async (req, res) => {

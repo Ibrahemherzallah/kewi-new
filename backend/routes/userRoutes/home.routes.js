@@ -15,6 +15,6 @@ router.post('/product/update-stock', updateStock);
 router.post('/purchase/send-whatsapp', sendWhatsAppMessage );
 router.patch("/loyalty/redeem-discount", requireAuth, redeemDiscountWithPoints);
 router.patch("/loyalty/redeem-free-product", requireAuth, redeemFreeProductWithPoints);
-router.post("/payments/lahza/init", /* requireAuth, */ initLahzaPayment);
-router.post("/payments/lahza/verify", /* requireAuth, */ verifyLahzaPayment);
+router.post("/payments/lahza/init", initLahzaPayment);
+router.post("/payments/lahza/verify", verifyLahzaPayment);
 export default router;

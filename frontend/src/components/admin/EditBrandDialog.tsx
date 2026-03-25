@@ -16,7 +16,7 @@ import imageCompression from "browser-image-compression";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "@/firebase";
 
-const API_BASE = import.meta.env.VITE_API_URL || "https://kewi.ps";
+const API_BASE = import.meta.env.VITE_ENV || "https://kewi.ps";
 const BRANDS_API = `${API_BASE}/admin/api/brands`;
 
 export type Brand = {
@@ -34,12 +34,7 @@ type EditBrandDialogProps = {
     onUpdated?: () => void;
 };
 
-export const EditBrandDialog: React.FC<EditBrandDialogProps> = ({
-                                                                    open,
-                                                                    onOpenChange,
-                                                                    brand,
-                                                                    onUpdated,
-                                                                }) => {
+export const EditBrandDialog: React.FC<EditBrandDialogProps> = ({open, onOpenChange, brand, onUpdated,}) => {
     const { toast } = useToast();
 
     const [formData, setFormData] = useState({
@@ -51,6 +46,7 @@ export const EditBrandDialog: React.FC<EditBrandDialogProps> = ({
     const [preview, setPreview] = useState<string | null>(brand.image || null);
     const [uploading, setUploading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const token = localStorage.getItem("token");
 
     // Sync when brand changes
     useEffect(() => {
@@ -132,6 +128,7 @@ export const EditBrandDialog: React.FC<EditBrandDialogProps> = ({
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify(payload),
             });

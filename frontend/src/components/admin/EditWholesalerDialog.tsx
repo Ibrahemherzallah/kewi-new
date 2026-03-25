@@ -24,13 +24,12 @@ interface EditWholesalerDialogProps {
     wholesaler: Wholesaler;
 }
 
-export const EditWholesalerDialog = ({
-                                         wholesaler,
-                                     }: EditWholesalerDialogProps) => {
+export const EditWholesalerDialog = ({wholesaler,}: EditWholesalerDialogProps) => {
     const [open, setOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const { toast } = useToast();
     const queryClient = useQueryClient();
+    const token = localStorage.getItem("token");
 
     const [formData, setFormData] = useState({
         userName: wholesaler.userName || "",
@@ -98,11 +97,12 @@ export const EditWholesalerDialog = ({
             }
 
             const res = await fetch(
-                `https://kewi.ps/admin/api/wholesalers/${wholesaler._id}`,
+                `${import.meta.env.VITE_ENV}/admin/api/wholesalers/${wholesaler._id}`,
                 {
                     method: "PUT",
                     headers: {
                         "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
                     },
                     body: JSON.stringify(payload),
                 }

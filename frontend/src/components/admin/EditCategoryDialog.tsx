@@ -16,9 +16,9 @@ import imageCompression from "browser-image-compression";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "@/firebase.ts";
 
-const API_BASE = import.meta.env.VITE_API_URL
-    ? `${import.meta.env.VITE_API_URL}/admin/api/categories`
-    : "https://kewi.ps/admin/api/categories";
+const API_BASE = import.meta.env.VITE_ENV
+    ? `${import.meta.env.VITE_ENV}/admin/api/categories`
+    : `https://kewi.ps/admin/api/categories`;
 
 export const EditCategoryDialog = ({open, setOpen, category, onUpdated,}: {
     open: boolean;
@@ -33,6 +33,7 @@ export const EditCategoryDialog = ({open, setOpen, category, onUpdated,}: {
     const [imageUrl, setImageUrl] = useState<string | null>(category?.image || null);
     const [uploading, setUploading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const token = localStorage.getItem("token");
 
     useEffect(() => {
         if (category) {
@@ -90,7 +91,10 @@ export const EditCategoryDialog = ({open, setOpen, category, onUpdated,}: {
 
             const res = await fetch(`${API_BASE}/${category._id}`, {
                 method: "PUT",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
                 body: JSON.stringify(body),
             });
 

@@ -1,5 +1,5 @@
+import 'dotenv/config';
 import express from 'express';
-import dotenv from 'dotenv';
 import connectDB from './db/connectDB.js';
 import authRoutes from './routes/adminRoutes/auth.routes.js';
 import wholesalerRoutes from './routes/adminRoutes/wholesalers.routes.js';
@@ -23,7 +23,6 @@ import { homeMeta, productMeta, categoryMeta } from './metaTemplates.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config();
 const PORT = process.env.PORT || 5000;
 const app = express();
 

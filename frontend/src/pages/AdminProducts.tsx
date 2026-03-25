@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { EditProductDialog } from "@/components/admin/EditProductDialog";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue,} from "@/components/ui/select";
 
-const API_BASE = import.meta.env.VITE_API_URL || "https://kewi.ps";
+const API_BASE = import.meta.env.VITE_ENV || "https://kewi.ps";
 const PRODUCTS_API = `${API_BASE}/admin/api/products`;
 const CATEGORIES_API = `${API_BASE}/admin/api/categories`;
 
@@ -52,6 +52,7 @@ const AdminProducts = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const token = localStorage.getItem("token");
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -96,6 +97,7 @@ const AdminProducts = () => {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           featured: !product.featured,
@@ -132,6 +134,10 @@ const AdminProducts = () => {
     try {
       const res = await fetch(`${PRODUCTS_API}/${id}`, {
         method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       const data = await res.json();

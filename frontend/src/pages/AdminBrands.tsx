@@ -17,8 +17,7 @@ import {
 import { AddBrandDialog } from "@/components/admin/AddBrandDialog";
 import { EditBrandDialog, Brand } from "@/components/admin/EditBrandDialog";
 import { useToast } from "@/hooks/use-toast";
-
-const API_BASE = import.meta.env.VITE_API_URL || "https://kewi.ps";
+const API_BASE = import.meta.env.VITE_ENV || "https://kewi.ps";
 const BRANDS_API = `${API_BASE}/admin/api/brands`;
 
 const AdminBrands = () => {
@@ -29,6 +28,7 @@ const AdminBrands = () => {
 
   const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const token = localStorage.getItem("token");
 
   const { toast } = useToast();
 
@@ -60,6 +60,10 @@ const AdminBrands = () => {
     try {
       const res = await fetch(`${BRANDS_API}/${id}`, {
         method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       const data = await res.json();

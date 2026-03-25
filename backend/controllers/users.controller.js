@@ -1,5 +1,6 @@
 import User from "../models/users.model.js";
 import Purchase from "../models/purchase.model.js";
+import mongoose from "mongoose";
 
 export const getMe = async (req, res) => {
     try {
@@ -150,5 +151,30 @@ export const markOrderDeliveredByUser = async (req, res) => {
             message: "Failed to mark order as delivered",
             error: error.message,
         });
+    }
+};
+
+
+export const deleteUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ error: "Invalid user id" });
+        }
+
+        const deletedUser = await User.findOneAndDelete({
+            _id: id,
+            role: "user",
+        });
+
+        if (!deletedUser) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        res.status(200).json({ message: "User deleted successfully" });
+    } catch (error) {
+        console.error("Error:", error.message);
+        res.status(500).json({ error: "Internal Server Error" });
     }
 };

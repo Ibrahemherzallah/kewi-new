@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,8 @@ import { ArrowLeft, Search, Building2, User2 } from "lucide-react";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow,} from "@/components/ui/table";
 import { AddWholesalerDialog } from "@/components/admin/AddWholesalerDialog";
 import { EditWholesalerDialog } from "@/components/admin/EditWholesalerDialog";
-
+import { useToast } from "@/hooks/use-toast";
+import { Trash2 } from "lucide-react";
 // Check if DOB matches today's date
 const isBirthdayToday = (dob?: string) => {
   if (!dob) return false;
@@ -24,13 +25,28 @@ const isBirthdayToday = (dob?: string) => {
 const AdminWholesaler = () => {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<"users" | "wholesalers">("users");
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const token = localStorage.getItem("token");
 
   // Fetch USERS
-  const { data: usersData = [], isLoading: loadingUsers } = useQuery({
+  const { data: usersData = [], isLoading: loadingUsers, error } = useQuery({
     queryKey: ["admin-users"],
     queryFn: async () => {
-      const res = await fetch("https://kewi.ps/admin/api/users");
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(`${import.meta.env.VITE_ENV}/admin/api/users`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
       const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to fetch users");
+      }
+
       return Array.isArray(data) ? data : [];
     },
   });
@@ -39,7 +55,11 @@ const AdminWholesaler = () => {
   const { data: wholesalersData = [], isLoading: loadingWholesalers } = useQuery({
     queryKey: ["admin-wholesalers"],
     queryFn: async () => {
-      const res = await fetch("https://kewi.ps/admin/api/wholesalers");
+      const res = await fetch(`${import.meta.env.VITE_ENV}/admin/api/wholesalers`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       const data = await res.json();
       return Array.isArray(data) ? data : [];
     },
@@ -67,6 +87,55 @@ const AdminWholesaler = () => {
   const tableData = activeTab === "users" ? filteredUsers : filteredWholesalers;
 
   const isLoading = loadingUsers || loadingWholesalers;
+
+
+  const handleDelete = async (id: string, type: "user" | "wholesaler", name: string) => {
+    const confirmed = window.confirm(
+        `Are you sure you want to delete this ${type}: ${name}?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const endpoint =
+          type === "user"
+              ? `${import.meta.env.VITE_ENV}/admin/api/users/${id}`
+              : `${import.meta.env.VITE_ENV}/admin/api/wholesalers/${id}`;
+
+      const res = await fetch(endpoint, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || `Failed to delete ${type}`);
+      }
+
+      toast({
+        title: "Success",
+        description: `${type === "user" ? "User" : "Wholesaler"} deleted successfully`,
+      });
+
+      if (type === "user") {
+        await queryClient.invalidateQueries({queryKey: ["admin-users"]});
+      } else {
+        await queryClient.invalidateQueries({queryKey: ["admin-wholesalers"]});
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || `Failed to delete ${type}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+
 
   return (
       <div className="min-h-screen bg-background">
@@ -155,10 +224,7 @@ const AdminWholesaler = () => {
                       {activeTab === "users" && <TableHead>Date of Birth</TableHead>}
                       <TableHead>Total Orders</TableHead>
                       <TableHead>Status</TableHead>
-                      {
-                        activeTab === "wholesalers" && (
-                          <TableHead>Actions</TableHead>
-                      )}
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -210,9 +276,26 @@ const AdminWholesaler = () => {
                             </TableCell>
 
                             <TableCell>
-                              {activeTab === "wholesalers" && (
-                                  <EditWholesalerDialog wholesaler={item} />
-                              )}
+                              <div className="flex items-center gap-2">
+                                {activeTab === "wholesalers" && (
+                                    <EditWholesalerDialog wholesaler={item} />
+                                )}
+
+                                <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() =>
+                                        handleDelete(
+                                            item._id,
+                                            activeTab === "users" ? "user" : "wholesaler",
+                                            item.userName || item.name || "Unknown"
+                                        )
+                                    }
+                                >
+                                  <Trash2 className="h-4 w-4 mr-1" />
+                                  Delete
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                       );

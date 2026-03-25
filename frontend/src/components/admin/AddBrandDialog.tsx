@@ -13,18 +13,17 @@ import imageCompression from "browser-image-compression";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "@/firebase";
 
-const API_BASE = import.meta.env.VITE_API_URL || "https://kewi.ps";
+const API_BASE = import.meta.env.VITE_ENV || "https://kewi.ps";
 const BRANDS_API = `${API_BASE}/admin/api/brands`;
 
 type AddBrandDialogProps = {
   onBrandCreated?: () => void;
 };
 
-export const AddBrandDialog: React.FC<AddBrandDialogProps> = ({
-                                                                onBrandCreated,
-                                                              }) => {
+export const AddBrandDialog: React.FC<AddBrandDialogProps> = ({onBrandCreated,}) => {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const token = localStorage.getItem("token");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -112,6 +111,7 @@ export const AddBrandDialog: React.FC<AddBrandDialogProps> = ({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });

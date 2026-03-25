@@ -12,23 +12,19 @@ import imageCompression from "browser-image-compression";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { storage } from "@/firebase.ts";
 
-// same API base style as AdminCategories
-const CATEGORIES_API = import.meta.env.VITE_API_URL
-    ? `${import.meta.env.VITE_API_URL}/categories`
-    : "/api/categories";
+
 
 type AddCategoryDialogProps = {
   onCategoryCreated?: () => void;
 };
 
-export const AddCategoryDialog: React.FC<AddCategoryDialogProps> = ({
-                                                                      onCategoryCreated,
-                                                                    }) => {
+export const AddCategoryDialog: React.FC<AddCategoryDialogProps> = ({onCategoryCreated,}) => {
   const [open, setOpen] = useState(false);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [other, setOther] = useState(false);
+  const token = localStorage.getItem("token");
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -114,10 +110,11 @@ export const AddCategoryDialog: React.FC<AddCategoryDialogProps> = ({
         image: imageUrl || "", // 🔴 here we send the Firebase URL to BE
       };
 
-      const res = await fetch('https://kewi.ps/admin/api/categories', {
+      const res = await fetch(`${import.meta.env.VITE_ENV}/admin/api/categories`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(body),
       });

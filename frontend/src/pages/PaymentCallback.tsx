@@ -25,7 +25,7 @@ const PaymentCallback = ({updateCart, setCheckoutOpen, setFreeProductId, setAppl
                 const purchaseBody = JSON.parse(pendingOrder);
 
                 const res = await fetch(
-                    "https://kewi.ps/user/api/payments/lahza/verify",
+                    `${import.meta.env.VITE_ENV}/user/api/payments/lahza/verify`,
                     {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
