@@ -418,7 +418,7 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({onProductCrea
     });
   };
   const selectedCategory = categories.find((c) => c._id === formData.categoryId);
-  const showBrandSelect = selectedCategory?.name === "حقائب اليد";
+  const showBrandSelect = selectedCategory?.name === "حقائب اليد" || selectedCategory?.name === "Kéwi bags";
 
   return (
       <Dialog open={open} onOpenChange={setOpen}>

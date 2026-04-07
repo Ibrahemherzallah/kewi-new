@@ -139,7 +139,7 @@ const CategoryProducts = () => {
         fetchData();
     }, [categoryId]);
 
-    const isHandbagsCategory = category?.name === "حقائب اليد";
+    const isHandbagsCategory = category?.name === "حقائب اليد"  || category?.name === "Kéwi bags";
     const sortWithSoldOutBottom = (list: ApiProduct[]) => {
         const arr = [...list];
 
