@@ -12,14 +12,15 @@ export const getAdminDashboardStats = async (req, res) => {
                         orderStatus: { $in: ["ordered", "confirmed"] },
                 });
 
-                // 3️⃣ Monthly Revenue (only delivered orders this month)
+                // 3️⃣ Monthly Revenue (only shipped orders this month)
                 const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+                console.log("startOfMonth is: " , startOfMonth)
 
                 const monthlyRevenueAgg = await Purchase.aggregate([
                         {
                                 $match: {
-                                        orderStatus: "delivered",
-                                        deliveredAt: { $gte: startOfMonth },
+                                        orderStatus: "shipped",
+                                        shippedAt: { $gte: startOfMonth },
                                 },
                         },
                         {
