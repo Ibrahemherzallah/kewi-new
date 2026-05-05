@@ -30,6 +30,8 @@ import SignUp from "./pages/SignUp";
 import Profile from "./pages/Profile";
 import DeliveryTerms from "@/pages/DeliveryTerms.tsx";
 import PaymentCallback from "./pages/PaymentCallback";
+import PrivacyPolicy from "@/pages/PrivacyPolicy.tsx";
+import ReturnPolicy from "./pages/ReturnPolicy.tsx";
 const queryClient = new QueryClient();
 
 // Language, theme, loyalty, and favorites providers configured
@@ -55,6 +57,8 @@ const App = () => (
                     <Route path="/cart" element={<Cart />} />
                     <Route path="/favorites" element={<Favorites />} />
                     <Route path="/payment-callback" element={<PaymentCallback />} />
+                    <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                    <Route path="/return-policy" element={<ReturnPolicy />} />
                     <Route
                         path="/purchase-history"
                         element={

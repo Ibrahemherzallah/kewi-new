@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { getProductPrice } from "@/lib/pricing";
+import ReCAPTCHA from "react-google-recaptcha";
 
 interface CartItem {
   id?: string;
@@ -90,12 +91,13 @@ const Cart = () => {
   const [deliveryPrice, setDeliveryPrice] = useState<number>(0);
   const [confirmFreeProductOpen, setConfirmFreeProductOpen] = useState(false);
   const [pendingFreeProductId, setPendingFreeProductId] = useState<string | null>(null);
+  const [acceptedPolicies, setAcceptedPolicies] = useState(false);
   const discount = getDiscount();
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const role = typeof window !== "undefined" ? localStorage.getItem("userRole") : null;
   const isLoggedIn = !!token;
   const isWholesalerUser = role === "wholesaler";
-
+  const [captchaValue, setCaptchaValue] = useState<string | null>(null);
   // ---------- HELPERS ----------
 
   const getItemId = (item: CartItem): string => item.id || item._id || "";
@@ -380,6 +382,9 @@ const Cart = () => {
               email: "",
               mobile: purchaseBody.cNumber,
               ref: crypto.randomUUID(), // temporary reference
+              // ✅ ADD THIS
+              captchaToken: captchaValue,
+
             }),
           }
       );
@@ -432,8 +437,7 @@ const Cart = () => {
     }
 
     try {
-      const token =
-          typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
       // loyalty free product logic...
       // (keep as is)
@@ -453,10 +457,7 @@ const Cart = () => {
         };
       });
 
-      const numOfItems = cart.reduce(
-          (sum, item) => sum + (item.quantity || 1),
-          0
-      );
+      const numOfItems = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
 
       const totalWithoutDelivery = Number(total.toFixed(2));
       const totalWithDelivery = Number(grandTotal.toFixed(2));
@@ -470,7 +471,22 @@ const Cart = () => {
         setLoading(false);
         return;
       }
-
+      if (!captchaValue) {
+        toast({
+          title: t("toast.captchaValue.title"),
+          description: t("toast.captchaValue.desc"),
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!acceptedPolicies) {
+        toast({
+          title: t("toast.acceptedPolicies.title"),
+          description: t("toast.acceptedPolicies.desc"),
+          variant: "destructive"
+        });
+        return;
+      }
       // Shared purchase body (we might use it differently for each method)
       const purchaseBody = {
         cName: formData.name,
@@ -484,6 +500,8 @@ const Cart = () => {
         discount: !!(freeProductId || applyDiscount),
         numOfItems,
         paymentMethod: formData.paymentMethod,
+        // ✅ ADD THIS
+        captchaToken: captchaValue,
       };
 
       // 🔥 Now branch by payment method:
@@ -983,7 +1001,7 @@ const Cart = () => {
         <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
           <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{t("checkout.title")}</DialogTitle>
+              <DialogTitle className={'text-start'}>{t("checkout.title")}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCheckout} className="space-y-4">
               <div>
@@ -1168,7 +1186,22 @@ const Cart = () => {
                   {grandTotal.toFixed(2)} ₪
                 </p>
               </div>
-
+              <div className="flex items-start gap-2 mt-3">
+                <input
+                    type="checkbox"
+                    checked={acceptedPolicies}
+                    onChange={(e) => setAcceptedPolicies(e.target.checked)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {language === "ar"
+                      ? <>أوافق على <Link to="/return-policy" className="text-primary">سياسة الإرجاع</Link> و <Link to="/privacy-policy" className="text-primary">سياسة الخصوصية</Link></>
+                      : <>I agree to the <Link to="/return-policy" className="text-primary">Return Policy</Link> and <Link to="/privacy-policy" className="text-primary">Privacy Policy</Link></>}
+                </p>
+              </div>
+              <ReCAPTCHA
+                  sitekey="6Lfi69osAAAAACRbBx1MQzaxz37xxc6U1U8bVZ_9"
+                  onChange={(value) => setCaptchaValue(value)}
+              />
               <div className="flex gap-3 pt-4">
                 <Button
                     type="button"

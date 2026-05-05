@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Facebook, Instagram, Mail, Phone, MapPin } from "lucide-react";
 import { SiTiktok } from "react-icons/si";
+import visa from "../assets/visa.png";
+import masterCard from "../assets/masterCard.png";
 
 
 export const Footer = () => {
@@ -17,6 +19,8 @@ export const Footer = () => {
     company: [
       { name: { en: 'About Us', ar: 'من نحن' }, path: '/about' },
       { name: { en: 'Delivery Terms', ar: 'شروط التوصيل' }, path: '/delivery-terms' },
+      { name: { en: 'Privacy Policy', ar: 'سياسة الخصوصية' }, path: '/privacy-policy' },
+      { name: { en: 'Return Policy', ar: 'سياسة الإرجاع' }, path: '/return-policy' },
       { name: { en: 'Contact', ar: 'اتصل بنا' }, path: 'https://wa.me/972599128813' },
     ],
   };
@@ -98,6 +102,10 @@ export const Footer = () => {
                 <MapPin className="h-4 w-4" />
                 <span>{language === 'en' ? 'Palestine' : 'فلسطين'}</span>
               </li>
+              <div className="flex gap-3 mt-6">
+                <img src={visa} className="h-6" />
+                <img src={masterCard} className="h-6" />
+              </div>
             </ul>
           </div>
         </div>
