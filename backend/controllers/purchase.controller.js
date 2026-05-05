@@ -5,6 +5,8 @@ import mongoose from "mongoose";
 import twilio from 'twilio';
 import dotenv from 'dotenv';
 import axios from "axios";
+import fetch from "node-fetch";
+
 dotenv.config();
 
 
@@ -48,10 +50,31 @@ export const getPurchase = async (req, res) => {
     }
 };
 
+
+const verifyCaptcha = async (token) => {
+    const secret = process.env.RECAPTCHA_SECRET_KEY;
+    const res = await fetch(
+        `https://www.google.com/recaptcha/api/siteverify`,
+        {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: `secret=${secret}&response=${token}`,
+        }
+    );
+
+    const data = await res.json();
+    return data.success;
+};
+
 export const addPurchase = async (req, res) => {
     const {cName, cNumber, cAddress, cCity, delivery, notes, id, products, totalPrice,discount,numOfItems,} = req.body;
+    const isHuman = await verifyCaptcha(req.body.captchaToken);
 
-    console.log("products IS : ", products);
+    if (!isHuman) {
+        return res.status(400).json({
+            message: "Captcha verification failed",
+        });
+    }
 
     try {
         const newPurchase = new Purchase({
