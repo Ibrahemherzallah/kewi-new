@@ -77,30 +77,43 @@ app.use(
 
                 scriptSrc: [
                     "'self'",
-                    "https://cdn.jsdelivr.net",
                     "'unsafe-inline'",
-                    "'unsafe-eval'"
+                    "'unsafe-eval'",
+                    "https://cdn.jsdelivr.net",
+                    "https://www.google.com",
+                    "https://www.gstatic.com"
                 ],
 
-                styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+                styleSrc: [
+                    "'self'",
+                    "'unsafe-inline'",
+                    "https:"
+                ],
 
                 imgSrc: [
                     "'self'",
                     "data:",
                     "https://storage.googleapis.com",
-                    "https://firebasestorage.googleapis.com"
+                    "https://firebasestorage.googleapis.com",
+                    "https://www.google.com"
+                ],
+
+                frameSrc: [
+                    "'self'",
+                    "https://www.google.com"
                 ],
 
                 connectSrc: [
                     "'self'",
                     "https://kewi.ps",
                     "https://www.kewi.ps",
+                    "https://www.google.com",
+                    "https://www.gstatic.com",
                     "https://firebasestorage.googleapis.com",
                     "https://storage.googleapis.com"
                 ],
 
                 workerSrc: ["'self'", "blob:"],
-
                 objectSrc: ["'none'"]
             }
         }
