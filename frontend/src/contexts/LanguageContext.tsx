@@ -778,25 +778,6 @@ const translations: Record<string, Record<Language, string>> = {
   },
 
 
-  // LoyaltyCard
-  'loyaltyCard.header': { en: 'Loyalty Points', ar: 'نقاط الولاء', he: 'נקודות נאמנות' },
-  'loyaltyCard.availablePoints': { en: 'Available Points', ar: 'النقاط المتوفرة', he: 'נקודות זמינות' },
-  'loyaltyCard.freeProduct': { en: 'Free Product!', ar: 'منتج مجاني!', he: 'מוצר חינם!' },
-  'loyaltyCard.currentDiscount': { en: 'Your current discount:', ar: 'خصمك الحالي:', he: 'ההנחה הנוכחית שלך:' },
-  'loyaltyCard.nextMilestone.nextReward': { en: 'Next Reward', ar: 'المكافأة القادمة', he: 'הפרס הבא' },
-
-  'loyaltyCard.nextMilestone.nextReward.desc': {
-    en: 'Earn 2 points for every 50 shekels spent',
-    ar: 'اكسب 2 نقطة لكل 50 شيكل تنفقها',
-    he: 'צבור 2 נקודות על כל 50 ש״ח שתוציא'
-  },
-
-  'loyalty.nextMilestone': {
-    en: '{{points}} points to unlock {{reward}}',
-    ar: 'تحتاج {{points}} نقطة للحصول على {{reward}}',
-    he: '{{points}} נקודות כדי לפתוח את {{reward}}'
-  },
-
 
   // ROLES
   'roles.admin': { en: 'Admin', ar: 'مسؤول', he: 'מנהל' },
@@ -821,11 +802,6 @@ const translations: Record<string, Record<Language, string>> = {
     ar: 'تحتاج {{points}} نقطة للحصول على {{reward}}',
     he: '{{points}} נקודות כדי לפתוח את {{reward}}'
   },
-
-// ROLES
-  'roles.admin': { en: 'Admin', ar: 'مسؤول', he: 'מנהל' },
-  'roles.wholesaler': { en: 'Wholesaler', ar: 'تاجر جملة', he: 'סיטונאי' },
-  'roles.user': { en: 'User', ar: 'مستخدم', he: 'משתמש' },
 
 // Return Policy
   'return.header': {
