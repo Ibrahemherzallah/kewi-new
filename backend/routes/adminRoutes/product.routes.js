@@ -18,6 +18,7 @@ router.patch("/products/:id/click", incrementProductClicks);
 router.get('/products/category/:categoryId', getProductsByCategory);
 router.get('/related-products/category/:categoryId', getRelatedProductsByCategory);
 router.post("/products",requireAuth, requireAdmin, upload.array("images", 10), addProduct);
+router.put("/products/:id",requireAuth, requireAdmin, upload.array("images", 10), updateProduct);
 router.get("/products/discount",requireAuth, requireAdmin, upload.array("images", 10), updateProduct);
 router.delete("/products/:id",requireAuth, requireAdmin, deleteProduct);
 

@@ -17,7 +17,7 @@ interface PurchaseProduct {
   quantity: number;
   color?: string;
   name?: string;
-  price?: number; // unit price if you stored it
+  price?: number;
 }
 
 interface ApiPurchase {
@@ -344,16 +344,16 @@ const PurchaseHistory = () => {
                           <TableBody>
                             {purchase.items.map((item, idx) => (
                                 <TableRow key={idx}>
-                                  <TableCell className="font-medium" dir={language === 'ar' ? 'ltr' : ''}>
+                                  <TableCell className="font-medium" dir={language === 'en' ? '' : 'ltr'}>
                                     {item.name}
                                   </TableCell>
-                                  <TableCell dir={language === 'ar' ? 'ltr' : ''}>{item.quantity}</TableCell>
-                                  <TableCell dir={language === 'ar' ? 'ltr' : ''}>
+                                  <TableCell dir={language === 'en' ? '' : 'ltr'}>{item.quantity}</TableCell>
+                                  <TableCell dir={language === 'en' ? '' : 'ltr'}>
                                     {item.price > 0
                                         ? `${item.price.toFixed(2)} ₪`
                                         : "—"}
                                   </TableCell>
-                                  <TableCell dir={language === 'ar' ? 'ltr' : ''}>
+                                  <TableCell dir={language === 'en' ? '' : 'ltr'}>
                                     {item.price > 0
                                         ? `${(item.price * item.quantity).toFixed(
                                             2

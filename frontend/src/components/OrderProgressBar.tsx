@@ -13,28 +13,28 @@ interface OrderProgressBarProps {
 }
 
 export const OrderProgressBar = ({status, onConfirmReceived, isConfirmed, orderId,}: OrderProgressBarProps) => {
-  const { language } = useLanguage();
+  const { t, language } = useLanguage();
   const role = typeof window !== "undefined" ? localStorage.getItem("userRole") : null;
 
   const steps: { key: UIStatus; label: string; icon: any }[] = [
     {
       key: "ordered",
-      label: language === "ar" ? "تم الطلب" : "Ordered",
+      label: language === "ar" ? "تم الطلب" : language === "en" ? "Ordered" : "הוזמן",
       icon: Package,
     },
     {
       key: "confirmed",
-      label: language === "ar" ? "تم التأكيد" : "Confirmed",
+      label: language === "ar" ? "تم التأكيد" : language === "en" ? "Confirmed" : "מְאוּשָׁר",
       icon: CheckCircle2,
     },
     {
       key: "shipped",
-      label: language === "ar" ? "تم الشحن" : "Shipped",
+      label: language === "ar" ? "تم الشحن" : language === "en" ? "Shipped" : "נשלח",
       icon: Truck,
     },
     {
       key: "delivered",
-      label: language === "ar" ? "تم الاستلام" : "Delivered",
+      label: language === "ar" ? "تم الاستلام" : language === "en" ? "Delivered" : "נמסר",
       icon: Home,
     },
   ];
@@ -76,10 +76,7 @@ export const OrderProgressBar = ({status, onConfirmReceived, isConfirmed, orderI
           {/* Full background line */}
           <div className="absolute top-5 left-0 right-0 h-0.5 bg-muted" />
           {/* Filled progress line */}
-          <div
-              className="absolute top-5 left-0 h-0.5 bg-primary transition-all"
-              style={{ width: `${progressPercent}%` }}
-          />
+          <div className="absolute top-5 left-0 h-0.5 bg-primary transition-all" style={{ width: `${progressPercent}%` }}/>
 
           {/* Steps */}
           <div className="relative flex items-center justify-between">
@@ -88,13 +85,9 @@ export const OrderProgressBar = ({status, onConfirmReceived, isConfirmed, orderI
               const Icon = step.icon;
 
               return (
-                  <div
-                      key={step.key}
-                      className="flex flex-col items-center flex-1"
-                  >
+                  <div key={step.key} className="flex flex-col items-center flex-1">
                     {/* Circle */}
-                    <div
-                        className={cn(
+                    <div className={cn(
                             "relative z-10 w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all",
                             stepStatus === "completed" &&
                             "bg-primary border-primary text-primary-foreground",
@@ -110,15 +103,14 @@ export const OrderProgressBar = ({status, onConfirmReceived, isConfirmed, orderI
                     </div>
 
                     {/* Label */}
-                    <span
-                        className={cn(
+                    <span className={cn(
                             "mt-2 text-sm font-medium text-center",
                             stepStatus === "completed" && "text-primary",
                             stepStatus === "pending" && "text-muted-foreground"
                         )}
                     >
-                  {step.label}
-                </span>
+                      {step.label}
+                    </span>
 
                     {/* Confirm checkbox – only when shipped and not yet confirmed */}
                     {step.key === "delivered" &&
@@ -128,18 +120,11 @@ export const OrderProgressBar = ({status, onConfirmReceived, isConfirmed, orderI
                               <Checkbox
                                   id={`confirm-${orderId}`}
                                   onCheckedChange={(checked) => {
-                                    if (checked && onConfirmReceived) {
-                                      onConfirmReceived();
-                                    }
+                                    if (checked && onConfirmReceived) {onConfirmReceived();}
                                   }}
                               />
-                              <label
-                                  htmlFor={`confirm-${orderId}`}
-                                  className="text-xs text-muted-foreground cursor-pointer"
-                              >
-                                {language === "ar"
-                                    ? "تأكيد الاستلام"
-                                    : "Confirm received"}
+                              <label htmlFor={`confirm-${orderId}`} className="text-xs text-muted-foreground cursor-pointer">
+                                {t('orderProgress.confirmReceived')}
                               </label>
                             </div>
                         )}
@@ -153,9 +138,7 @@ export const OrderProgressBar = ({status, onConfirmReceived, isConfirmed, orderI
         {status === "shipped" && !isConfirmed && role === 'user' && (
             <div className="bg-secondary/50 border border-secondary rounded-lg p-3 mt-2">
               <p className="text-sm text-secondary-foreground text-center">
-                {language === "ar"
-                    ? "لن تحصل على نقاط الولاء حتى تؤكد استلام الطلب"
-                    : "You will not receive loyalty points until you confirm you received the order."}
+                {t('orderProgress.confirmReceived.desc')}
               </p>
             </div>
         )}
