@@ -348,11 +348,7 @@ const AdminProducts = () => {
 
                           {/* Featured toggle 👇 */}
                           <TableCell>
-                            <Button
-                                variant={product.featured ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => toggleFeatured(product)}
-                            >
+                            <Button variant={product.featured ? "default" : "outline"} size="sm" onClick={() => toggleFeatured(product)}>
                               {product.featured ? "Yes" : "No"}
                             </Button>
                           </TableCell>

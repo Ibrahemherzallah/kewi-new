@@ -304,6 +304,11 @@ const translations: Record<string, Record<Language, string>> = {
   },
 
 
+
+  'orderProgress.confirmReceived': { en: 'Confirm received', ar: "تأكيد الاستلام", he: 'אישור קבלת'},
+  'orderProgress.confirmReceived.desc': { en: 'You will not receive loyalty points until you confirm you received the order.', ar: "لن تحصل على نقاط الولاء حتى تؤكد استلام الطلب", he: 'לא תקבלו נקודות נאמנות עד שתאשרו שקיבלתם את ההזמנה.'},
+
+
   'agreement.prefix': { en: 'I agree to the', ar: 'أوافق على', he: 'אני מסכים ל-' },
   'agreement.returnPolicy': { en: 'Return Policy', ar: 'سياسة الإرجاع', he: 'מדיניות החזרות' },
   'agreement.and': { en: 'and', ar: 'و', he: 'ו-' },

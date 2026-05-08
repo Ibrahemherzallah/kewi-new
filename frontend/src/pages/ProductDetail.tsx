@@ -541,7 +541,7 @@ const ProductDetail = () => {
                   </h2>
                 </div>
 
-                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                   {relatedProducts.map((prod) => (
                       <ProductCard key={prod._id} product={prod as any} onAddToCart={() => handleAddToCart(prod)}/>
                   ))}

@@ -465,14 +465,17 @@ const Cart = () => {
         setLoading(false);
         return;
       }
-      if (!captchaValue) {
-        toast({
-          title: t("toast.captchaValue.title"),
-          description: t("toast.captchaValue.desc"),
-          variant: "destructive",
-        });
-        return;
+      if (formData.paymentMethod === 'visa'){
+        if (!captchaValue) {
+          toast({
+            title: t("toast.captchaValue.title"),
+            description: t("toast.captchaValue.desc"),
+            variant: "destructive",
+          });
+          return;
+        }
       }
+
       if (!acceptedPolicies) {
         toast({
           title: t("toast.acceptedPolicies.title"),
@@ -1116,7 +1119,11 @@ const Cart = () => {
                 </p>
               </div>
               <div className="relative z-[10000]">
-                <ReCAPTCHA sitekey="6Lfi69osAAAAACRbBx1MQzaxz37xxc6U1U8bVZ_9" onChange={(value) => setCaptchaValue(value)}/>
+                {
+                  formData?.paymentMethod === "visa" && (
+                        <ReCAPTCHA sitekey="6Lfi69osAAAAACRbBx1MQzaxz37xxc6U1U8bVZ_9" onChange={(value) => setCaptchaValue(value)}/>
+                    )
+                }
               </div>
               <div className="flex gap-3 pt-4">
                 <Button type="button" variant="outline" onClick={() => setCheckoutOpen(false)} className="flex-1">

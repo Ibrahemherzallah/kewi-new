@@ -77,7 +77,31 @@ const AdminOrders = () => {
   const handlePrintInvoice = (order: Purchase) => {
         const printWindow = window.open("", "_blank", "width=800,height=900");
         if (!printWindow) return;
+        let deliveryPrice = 0;
 
+        switch (order?.city) {
+          case 'West Bank':
+          case 'الضفة الغربية':
+            deliveryPrice =
+                order?.deliveryType === 'مستعجل' ? 20 : 10;
+            break;
+
+          case '48 Territories':
+          case 'الداخل':
+            deliveryPrice =
+                order?.deliveryType === 'مستعجل' ? 70 : 50;
+            break;
+
+          case 'Jerusalem':
+          case 'القدس':
+            deliveryPrice =
+                order?.deliveryType === 'مستعجل' ? 30 : 20;
+            break;
+
+          default:
+            deliveryPrice = 0;
+        }
+        // const deliveryPrice = city ? 'West Bank' : ;
         const dir = language === "ar" ? "rtl" : "ltr";
         const textAlign = language === "ar" ? "right" : "left";
 
@@ -215,12 +239,16 @@ const AdminOrders = () => {
               <td>${order.totalPrice.toFixed(2)} ₪</td>
             </tr>
             <tr>
+              <td>${language === "ar" ? "سعر التوصيل" : "Delivery price"}</td>
+              <td>${deliveryPrice.toFixed(2)} ₪</td>
+            </tr>
+            <tr>
               <td>${language === "ar" ? "خصم" : "Discount"}</td>
               <td>${order.discount ? (language === "ar" ? "نعم" : "Yes") : (language === "ar" ? "لا" : "No")}</td>
             </tr>
             <tr>
               <td>${language === "ar" ? "الإجمالي النهائي" : "Final total"}</td>
-              <td>${order.totalPrice.toFixed(2)} ₪</td>
+              <td>${order.totalPrice + deliveryPrice} ₪</td>
             </tr>
           </table>
         </div>
