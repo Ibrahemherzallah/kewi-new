@@ -1,5 +1,3 @@
-// src/pages/ProductDetail.tsx
-
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
@@ -10,11 +8,11 @@ import { ProductCard } from "@/components/ProductCard";
 import { ShoppingCart, ArrowLeft, Barcode } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const API_BASE = import.meta.env.VITE_ENV || "https://kewi.ps";
 const PRODUCT_API = (id: string) => `${API_BASE}/admin/api/products/${id}`;
-const CATEGORY_PRODUCTS_API = (id: string) =>
-    `${API_BASE}/admin/api/products/category/${id}`;
+const CATEGORY_PRODUCTS_API = (id: string) => `${API_BASE}/admin/api/products/category/${id}`;
 
 type ApiProduct = {
   _id: string;
@@ -41,9 +39,10 @@ type ApiProduct = {
 const ProductDetail = () => {
   const params = useParams();
   const productId = (params.id as string) || (params.productId as string) || "";
-
+  const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
-  const { language } = useLanguage();
+  const { t,language } = useLanguage();
 
   const [product, setProduct] = useState<ApiProduct | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<ApiProduct[]>([]);
@@ -52,7 +51,7 @@ const ProductDetail = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
-
+  const categoryId = typeof product?.categoryId === "object" ? product.categoryId._id : product?.categoryId;
   // ---------- HELPERS FOR LOCALIZED FIELDS ----------
 
   const getLocalizedName = (p: ApiProduct | null): string => {
@@ -123,10 +122,7 @@ const ProductDetail = () => {
         setProduct(prod);
 
         // 2) Get related products (same category)
-        const catId =
-            typeof prod.categoryId === "object"
-                ? prod.categoryId?._id
-                : prod.categoryId;
+        const catId = typeof prod.categoryId === "object" ? prod.categoryId?._id : prod.categoryId;
 
         if (catId) {
           const relRes = await fetch(CATEGORY_PRODUCTS_API(catId));
@@ -193,19 +189,24 @@ const ProductDetail = () => {
               : "متوفر";
 
 
+  const badgeHb = isSoldOut ? 'הַכַּרטִיסִים אָזלוּ' : product?.isSoldOut
+      ? "הַכַּרטִיסִים אָזלוּ"
+      : product?.isOnSale
+          ? "בִּמְכִירָה"
+          : product?.isSoon
+              ? "בקרוב"
+              : "available";
 
 
 
-  console.log("isSoldOut is : " , isSoldOut)
+
   // ---------- PRICE LOGIC (UNIFIED WITH ProductCard) ----------
 
-  const role =
-      typeof window !== "undefined" ? localStorage.getItem("userRole") : null;
+  const role = typeof window !== "undefined" ? localStorage.getItem("userRole") : null;
   const isWholesalerUser = role === "wholesaler";
 
   const customerPrice: number = product?.customerPrice ?? 0;
-  const wholesalerPrice: number =
-      product?.wholesalerPrice ?? customerPrice;
+  const wholesalerPrice: number = product?.wholesalerPrice ?? customerPrice;
   const salePrice: number | null = product?.salePrice ?? null;
 
   let mainPrice = customerPrice;
@@ -215,11 +216,11 @@ const ProductDetail = () => {
   if (isWholesalerUser) {
     mainPrice = wholesalerPrice;
     oldPrice = customerPrice;
-    priceLabel = language === "ar" ? "سعر الجملة" : "Wholesale price";
+    priceLabel = t('priceLabelWholesalePrice');
   } else if (isOnSale && salePrice != null) {
     mainPrice = salePrice;
     oldPrice = customerPrice;
-    priceLabel = language === "ar" ? "سعر العرض" : "Sale price";
+    priceLabel = t('priceLabelSalePrice');
   } else {
     mainPrice = customerPrice;
     oldPrice = null;
@@ -235,18 +236,13 @@ const ProductDetail = () => {
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
 
     // 🟦 1) Detect selected variant (color)
-    const selectedVariant = isMulti && variants.length > 0
-        ? variants[selectedVariantIndex]
-        : null;
+    const selectedVariant = isMulti && variants.length > 0 ? variants[selectedVariantIndex] : null;
 
     // If product has multiple colors, force the user to choose one
     if (isMulti && !selectedVariant) {
       toast({
-        title: language === "ar" ? "خطأ" : "Error",
-        description:
-            language === "ar"
-                ? "الرجاء اختيار اللون قبل الإضافة إلى السلة"
-                : "Please choose a color before adding to cart",
+        title: t('toast.err'),
+        description: t('toast.err.chooseColor'),
         variant: "destructive",
       });
       return;
@@ -294,15 +290,13 @@ const ProductDetail = () => {
 
     // 🟦 7) Toast confirmation
     toast({
-      title: language === "ar" ? "تمت الإضافة" : "Added to cart",
+      title: t('toast.suc.addedToCart'),
       description: `${qty}x ${getLocalizedName(productToAdd)} ${
           selectedVariant
               ? `(${selectedVariant.color})`
               : ""
       } ${
-          language === "ar"
-              ? "تمت إضافته إلى السلة"
-              : "added to your cart."
+          t('toast.suc.addedToCart.desc')
       }`,
     });
   };
@@ -314,7 +308,7 @@ const ProductDetail = () => {
         <div className="min-h-screen bg-background">
           <Navbar />
           <div className="container mx-auto px-4 py-12 text-center text-muted-foreground">
-            {language === "ar" ? "جاري تحميل المنتج..." : "Loading product..."}
+            {t('productDetails.productLoading')}
           </div>
         </div>
     );
@@ -326,7 +320,7 @@ const ProductDetail = () => {
           <Navbar />
           <div className="container mx-auto px-4 py-12 text-center">
             <h1 className="text-2xl font-bold mb-4">
-              {language === "ar" ? "المنتج غير موجود" : "Product not found"}
+              {t('productDetails.productNotExist')}
             </h1>
             {error && (
                 <p className="text-sm text-destructive mb-4">{error}</p>
@@ -334,7 +328,7 @@ const ProductDetail = () => {
             <Link to="/products">
               <Button variant="outline">
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                {language === "ar" ? "العودة للمنتجات" : "Back to Products"}
+                {t('productDetails.backToProducts')}
               </Button>
             </Link>
           </div>
@@ -347,10 +341,10 @@ const ProductDetail = () => {
         <Navbar />
 
         <div className="container mx-auto px-4 py-12">
-          <Link to="/products">
+          <Link to={`/category/${categoryId}${location.search}`}>
             <Button variant="ghost" className="mb-6">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              {language === "ar" ? "العودة للمنتجات" : "Back to Products"}
+              {t('productDetails.backProducts')}
             </Button>
           </Link>
 
@@ -360,20 +354,16 @@ const ProductDetail = () => {
               {/* Main image */}
               <div className="aspect-square rounded-2xl overflow-hidden bg-muted border border-border flex items-center justify-center relative">
                 {images.length > 0 ? (
-                    <img
-                        src={images[selectedImage]}
-                        alt={displayName || "Product image"}
-                        className={`${isSoldOut ?? `opacity-30` } w-full h-full object-cover`}
-                    />
+                    <img src={images[selectedImage]} alt={displayName || "Product image"} className={`${isSoldOut ?? `opacity-30` } w-full h-full object-cover`}/>
                 ) : (
                     <span className="text-muted-foreground text-sm">
-                  No image
+                    {t('productDetails.noImage')}
                 </span>
                 )}
 
                 {isSoldOut && (
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white font-semibold text-lg">
-                      {language === "ar" ? "غير متوفر" : "Unavailable"}
+                      {t('productDetails.unavailable')}
                     </div>
                 )}
               </div>
@@ -382,20 +372,13 @@ const ProductDetail = () => {
               {images.length > 1 && (
                   <div className="flex gap-4">
                     {images.map((image, index) => (
-                        <button
-                            key={index}
-                            onClick={() => setSelectedImage(index)}
-                            className={`w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                        <button key={index} onClick={() => setSelectedImage(index)} className={`w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
                                 selectedImage === index
                                     ? "border-primary"
                                     : "border-border"
                             }`}
                         >
-                          <img
-                              src={image}
-                              alt={`${displayName} ${index + 1}`}
-                              className="w-full h-full object-cover"
-                          />
+                          <img src={image} alt={`${displayName} ${index + 1}`} className="w-full h-full object-cover"/>
                         </button>
                     ))}
                   </div>
@@ -414,23 +397,16 @@ const ProductDetail = () => {
               {isMulti && variants.length > 0 && (
                   <div className="space-y-3">
                     <div className="text-sm text-muted-foreground">
-                      {language === "ar"
-                          ? "الألوان المتوفرة"
-                          : "Available Colors"}
+                      {t('productDetails.availableColors')}
                     </div>
 
                     <div className="flex gap-3">
                       {variants.map((variant: any, index: number) => (
-                          <button
-                              key={index}
-                              onClick={() => {
-                                setSelectedVariantIndex(index);
-                                setSelectedImage(0); // reset main image
-                              }}
+                          <button key={index} onClick={() => {setSelectedVariantIndex(index);setSelectedImage(0)}}
                               className={`w-10 h-10 rounded-full border cursor-pointer
-                        overflow-hidden flex items-center justify-center
-                        transition-all
-                        ${
+                              overflow-hidden flex items-center justify-center
+                              transition-all
+                              ${
                                   selectedVariantIndex === index
                                       ? "border-primary scale-110"
                                       : "border-gray-300"
@@ -438,10 +414,7 @@ const ProductDetail = () => {
                               title={variant.color}
                           >
                             {variant.image ? (
-                                <img
-                                    src={variant.image}
-                                    className="w-full h-full object-cover"
-                                />
+                                <img src={variant.image} className="w-full h-full object-cover"/>
                             ) : (
                                 <span className="text-xs">{variant.color}</span>
                             )}
@@ -453,7 +426,7 @@ const ProductDetail = () => {
 
               <div className="flex items-center gap-3">
                 <Badge variant={totalStock > 0 ? "default" : "destructive"}>
-                  {language === "ar" ? badgeAr : badgeEn}
+                  {language === "ar" ? badgeAr : language === "he" ? badgeHb : badgeEn}
                 </Badge>
                 <Badge variant="outline" className="gap-2">
                   <Barcode className="h-3 w-3" />
@@ -464,7 +437,7 @@ const ProductDetail = () => {
               {/* Price block – unified with ProductCard */}
               <div className="bg-muted/50 rounded-xl p-6 space-y-2">
                 <div className="text-sm text-muted-foreground">
-                  {language === "ar" ? "السعر" : "Price"}
+                  {t('productDetails.price')}
                 </div>
                 <div className="text-4xl font-bold text-primary">
                   {mainPrice.toFixed(2)} ₪
@@ -484,19 +457,19 @@ const ProductDetail = () => {
               <div className="grid grid-cols-2 gap-4 p-6 bg-card border border-border rounded-xl">
                 <div>
                   <div className="text-sm text-muted-foreground mb-1">
-                    {language === "ar" ? "الماركة" : "Brand"}
+                    {t('productDetails.brand')}
                   </div>
                   <div className="font-semibold">{getBrandName(product)}</div>
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground mb-1">
-                    {language === "ar" ? "التصنيف" : "Category"}
+                    {t('productDetails.category')}
                   </div>
                   <div className="font-semibold">{getCategoryName(product)}</div>
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground mb-1">
-                    {language === "ar" ? "المعرف الداخلي" : "Internal ID"}
+                    {t('productDetails.internalID')}
                   </div>
                   <div className="font-mono text-sm">
                     {product.id || "—"}
@@ -504,7 +477,7 @@ const ProductDetail = () => {
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground mb-1">
-                    {language === "ar" ? "حالة المنتج" : "Product Status"}
+                    {t('productDetails.productStatus')}
                   </div>
                   <div className="text-sm">
                     {language === "ar" ? badgeAr : badgeEn}
@@ -516,20 +489,15 @@ const ProductDetail = () => {
                   Object.keys(product.properties).length > 0 && (
                       <div className="space-y-3">
                         <h3 className="font-semibold">
-                          {language === "ar"
-                              ? "الخصائص"
-                              : "Properties"}
+                          {t('productDetails.properties')}
                         </h3>
                         <div className="grid gap-2">
                           {Object.entries(product.properties).map(
                               ([key, value]) => (
-                                  <div
-                                      key={key}
-                                      className="flex justify-between p-3 bg-muted/30 rounded-lg"
-                                  >
-                          <span className="text-muted-foreground capitalize">
-                            {key}
-                          </span>
+                                  <div key={key} className="flex justify-between p-3 bg-muted/30 rounded-lg">
+                                    <span className="text-muted-foreground capitalize">
+                                      {key}
+                                    </span>
                                     <span className="font-medium">{value}</span>
                                   </div>
                               )
@@ -540,22 +508,13 @@ const ProductDetail = () => {
 
               <div className="flex gap-4 items-center pt-6">
                 <div className="flex items-center gap-3">
-                  <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() =>
-                          setQuantity((q) => Math.max(1, q - 1))
-                      }
-                  >
+                  <Button variant="outline" size="icon" onClick={() => setQuantity((q) => Math.max(1, q - 1))}>
                     -
                   </Button>
                   <span className="w-12 text-center font-semibold">
-                  {quantity}
-                </span>
-                  <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() =>
+                    {quantity}
+                  </span>
+                  <Button variant="outline" size="icon" onClick={() =>
                           setQuantity((q) =>
                               totalStock > 0 ? Math.min(totalStock, q + 1) : q + 1
                           )
@@ -565,14 +524,9 @@ const ProductDetail = () => {
                   </Button>
                 </div>
 
-                <Button
-                    size="lg"
-                    className="flex-1 btn-scale bg-primary hover:bg-primary/90"
-                    onClick={() => handleAddToCart()}
-                    disabled={isSoldOut}
-                >
+                <Button size="lg" className="flex-1 btn-scale bg-primary hover:bg-primary/90" onClick={() => handleAddToCart()} disabled={isSoldOut}>
                   <ShoppingCart className="mr-2 h-5 w-5" />
-                  {language === "ar" ? "أضف إلى السلة" : "Add to Cart"}
+                  {t('productDetails.addToCart')}
                 </Button>
               </div>
             </div>
@@ -583,19 +537,13 @@ const ProductDetail = () => {
               <section className="mt-20">
                 <div className="text-center mb-12">
                   <h2 className="text-4xl font-bold">
-                    {language === "ar"
-                        ? "منتجات ذات صلة"
-                        : "Related Products"}
+                    {t('productDetails.relatedProducts')}
                   </h2>
                 </div>
 
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   {relatedProducts.map((prod) => (
-                      <ProductCard
-                          key={prod._id}
-                          product={prod as any}
-                          onAddToCart={() => handleAddToCart(prod)}
-                      />
+                      <ProductCard key={prod._id} product={prod as any} onAddToCart={() => handleAddToCart(prod)}/>
                   ))}
                 </div>
               </section>

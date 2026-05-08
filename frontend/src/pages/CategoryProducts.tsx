@@ -7,10 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Search, ArrowLeft } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue,} from "@/components/ui/select";
+import { useSearchParams } from "react-router-dom";
 
 const API_BASE = import.meta.env.VITE_ENV || "https://kewi.ps";
-const CATEGORY_PRODUCTS_API = (id: string) =>
-    `${API_BASE}/admin/api/products/category/${id}`;
+const CATEGORY_PRODUCTS_API = (id: string) => `${API_BASE}/admin/api/products/category/${id}`;
 const CATEGORIES_API = `${API_BASE}/admin/api/categories`;
 const BRANDS_API = `${API_BASE}/admin/api/brands`;
 
@@ -46,32 +46,50 @@ type BackendProduct = {
     color?: string;
     brand?: string | { name: string };
 };
-
 type Category = {
     _id: string;
     name: string;
 };
-
 type Brand = {
     _id: string;
     name: string;
 };
 
+const DISCOUNT_CATEGORY_ID = "69dcf967b9a447739261582c";
+
+
 const CategoryProducts = () => {
     const { categoryId } = useParams<{ categoryId: string }>();
     const { toast } = useToast();
     const { t, language } = useLanguage();
-    const [sortOrder, setSortOrder] = useState<string>("latest"); // 👈 new (الأحدث)
+    const [searchParams, setSearchParams] = useSearchParams();
+    const isDiscountCategory = categoryId === DISCOUNT_CATEGORY_ID;
+    const searchQuery = searchParams.get("search") || "";
+    const selectedBrand = searchParams.get("brand") || "all";
+    const selectedSize = searchParams.get("size") || "all";
+    const sortOrder = searchParams.get("sort") || "latest";
     const [products, setProducts] = useState<ApiProduct[]>([]);
     const [category, setCategory] = useState<Category | null>(null);
     const [brands, setBrands] = useState<Brand[]>([]);
-    const [selectedBrand, setSelectedBrand] = useState<string>("all");
-    const [selectedSize, setSelectedSize] = useState<string>("all");
-    const [searchQuery, setSearchQuery] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const randomRankRef = useRef<Record<string, number>>({});
+    const [categories, setCategories] = useState<Category[]>([]);
 
+    const randomRankRef = useRef<Record<string, number>>({});
+    const selectedCategoryFilter = searchParams.get("cat") || "all";
+
+
+    const updateParam = (key: string, value: string) => {
+        const newParams = new URLSearchParams(searchParams);
+
+        if (value === "all" || value === "") {
+            newParams.delete(key);
+        } else {
+            newParams.set(key, value);
+        }
+
+        setSearchParams(newParams);
+    };
     const getRandomRank = (key: string) => {
         if (randomRankRef.current[key] == null) {
             randomRankRef.current[key] = Math.random();
@@ -88,7 +106,6 @@ const CategoryProducts = () => {
             ""
         );
     };
-
     const getLocalizedDescription = (p: ApiProduct): string => {
         if (!p.description) return "";
         if (typeof p.description === "string") return p.description;
@@ -109,17 +126,22 @@ const CategoryProducts = () => {
                 setError(null);
 
                 const [prodRes, catRes, brandRes] = await Promise.all([
-                    fetch(CATEGORY_PRODUCTS_API(categoryId)),
+                    isDiscountCategory
+                        ? fetch(`${import.meta.env.VITE_ENV}/admin/api/products/discount`)
+                        : fetch(CATEGORY_PRODUCTS_API(categoryId)),
+
                     fetch(CATEGORIES_API),
                     fetch(BRANDS_API),
                 ]);
+                if (!prodRes.ok) throw new Error("Failed to fetch products");
 
-                if (!prodRes.ok) throw new Error("Failed to fetch category products");
-                const productsData: ApiProduct[] = await prodRes.json();
+                const productsData = await prodRes.json();
+
                 setProducts(productsData);
-
+                // if(!isDiscountCategory){}
                 if (catRes.ok) {
                     const cats: Category[] = await catRes.json();
+                    setCategories(cats)
                     const found = cats.find((c) => c._id === categoryId) || null;
                     setCategory(found);
                 }
@@ -138,7 +160,6 @@ const CategoryProducts = () => {
 
         fetchData();
     }, [categoryId]);
-
     const isHandbagsCategory = category?.name === "حقائب اليد"  || category?.name === "Kéwi bags";
     const sortWithSoldOutBottom = (list: ApiProduct[]) => {
         const arr = [...list];
@@ -174,35 +195,50 @@ const CategoryProducts = () => {
     };
 
     const filteredProducts = useMemo(() => {
-        const q = searchQuery.toLowerCase();
+        const q = (searchQuery || "").toLowerCase();
 
         const list = [...products].filter((p) => {
-            const name = getLocalizedName(p).toLowerCase();
-            const desc = getLocalizedDescription(p).toLowerCase();
+            const name = getLocalizedName(p)?.toLowerCase() || "";
+            const desc = getLocalizedDescription(p)?.toLowerCase() || "";
             const internalId = (p.id || "").toLowerCase();
 
+            // 🔎 search
             const matchesSearch =
-                name.includes(q) || desc.includes(q) || internalId.includes(q);
+                name.includes(q) ||
+                desc.includes(q) ||
+                internalId.includes(q);
 
-            // brand filter (handbags only)
+            // 🏷️ brand filter (ONLY for handbags, NOT discount page)
             let matchesBrand = true;
-            if (isHandbagsCategory && selectedBrand !== "all") {
-                if (!p.brandId) matchesBrand = false;
-                else if (typeof p.brandId === "object") matchesBrand = p.brandId?._id === selectedBrand;
-                else matchesBrand = p.brandId === selectedBrand;
+            if (!isDiscountCategory && isHandbagsCategory && selectedBrand !== "all") {
+                const brandId =
+                    typeof p.brandId === "object"
+                        ? p.brandId?._id
+                        : p.brandId;
+
+                matchesBrand = brandId === selectedBrand;
             }
 
-            // size filter
+            // 📦 category filter (ONLY for discount page)
+            let matchesCategory = true;
+            if (isDiscountCategory && selectedCategoryFilter !== "all") {
+                const catId =
+                    typeof p.categoryId === "object"
+                        ? p.categoryId?._id
+                        : p.categoryId;
+
+                matchesCategory = catId === selectedCategoryFilter;
+            }
+
+            // 📏 size filter
             let matchesSize = true;
             if (selectedSize !== "all") {
-                const productSize = (p as any).size;
-                matchesSize = productSize === selectedSize;
+                matchesSize = (p as any).size === selectedSize;
             }
 
-            return matchesSearch && matchesBrand && matchesSize;
+            return matchesSearch && matchesBrand && matchesCategory && matchesSize;
         });
-
-        // ✅ Sort
+        // 🔄 sorting
         list.sort((a, b) => {
             if (sortOrder === "random") {
                 const aKey = String((a as any)._id || a.id);
@@ -210,12 +246,8 @@ const CategoryProducts = () => {
                 return getRandomRank(aKey) - getRandomRank(bKey);
             }
 
-            const aCreated = (a as any).createdAt;
-            const bCreated = (b as any).createdAt;
-            if (!aCreated || !bCreated) return 0;
-
-            const aTime = new Date(aCreated).getTime();
-            const bTime = new Date(bCreated).getTime();
+            const aTime = new Date((a as any).createdAt || 0).getTime();
+            const bTime = new Date((b as any).createdAt || 0).getTime();
 
             if (sortOrder === "latest") return bTime - aTime;
             if (sortOrder === "oldest") return aTime - bTime;
@@ -224,8 +256,26 @@ const CategoryProducts = () => {
         });
 
         return sortWithSoldOutBottom(list);
-    }, [products, searchQuery, isHandbagsCategory, selectedBrand, selectedSize, sortOrder,]);
+    }, [
+        products,
+        searchQuery,
+        isHandbagsCategory,
+        isDiscountCategory,        // ✅ important
+        selectedBrand,
+        selectedCategoryFilter,    // ✅ important
+        selectedSize,
+        sortOrder
+    ]);
 
+    const incrementBrandClick = async (brandId: string) => {
+        try {
+            await fetch(`${import.meta.env.VITE_ENV}/admin/api/brands/${brandId}/click`, {
+                method: "PATCH", // or POST depending on your route
+            });
+        } catch (err) {
+            console.error("Failed to increment brand click:", err);
+        }
+    };
 
     const getProductName = (product: BackendProduct, language: string) => {
         if (!product.name) return language === "ar" ? "منتج بدون اسم" : "Unnamed product";
@@ -245,11 +295,9 @@ const CategoryProducts = () => {
 
         // 🟦 1) Auto-select variant if multi color
         const isMulti = product.isMultiColor && Array.isArray(product.variants);
-        console.log("isMulti is :" , isMulti)
         const selectedVariant = isMulti && product.variants.length > 0
             ? product.variants[0]          // 👈 first variant by default
             : null;
-        console.log("isMulti selectedVariant is :" , selectedVariant)
 
         // 🟦 2) Choose correct images
         const variantImage = selectedVariant?.image ? [selectedVariant.image] : [];
@@ -310,16 +358,12 @@ const CategoryProducts = () => {
                         </Link>
                         <div>
                             <h1 className="text-3xl font-bold">
-                                {category
-                                    ? category.name
-                                    : language === "ar"
-                                        ? "المنتجات"
-                                        : "Products"}
+                                {isDiscountCategory
+                                    ? t('categoryProducts.discount.header')
+                                    : category?.name}
                             </h1>
                             <p className="text-muted-foreground text-sm">
-                                {language === "ar"
-                                    ? "عرض جميع المنتجات ضمن هذا التصنيف"
-                                    : "Showing all products in this category"}
+                                {t('categoryProducts.showAllProducts')}
                             </p>
                         </div>
                     </div>
@@ -333,13 +377,9 @@ const CategoryProducts = () => {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                             <Input
                                 type="text"
-                                placeholder={
-                                    language === "ar"
-                                        ? "ابحث في هذا التصنيف..."
-                                        : "Search in this category..."
-                                }
+                                placeholder={t('categoryProducts.search.placeholder')}
                                 value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onChange={(e) => updateParam("search", e.target.value)}
                                 className="pl-10"
                             />
                         </div>
@@ -350,20 +390,22 @@ const CategoryProducts = () => {
                         {/* Brand filter (only for handbags) */}
                         {isHandbagsCategory && (
                             <div className="w-full md:w-64">
-                                <Select
-                                    value={selectedBrand}
-                                    onValueChange={(value) => setSelectedBrand(value)}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue
-                                            placeholder={
-                                                language === "ar" ? "تصفية حسب الماركة" : "Filter by brand"
+                                <Select value={selectedBrand} onValueChange={(value) => {
+                                        updateParam("brand", value);
+
+                                        if (value !== "all") {
+                                            const selected = brands.find((b) => b._id === value);
+                                            if (selected?.isFake) {
+                                                incrementBrandClick(value);
                                             }
-                                        />
+                                        }
+                                    }}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder= {t('categoryProducts.dropdown.filterByBrand')} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">
-                                            {language === "ar" ? "كل الماركات" : "All brands"}
+                                            {t('categoryProducts.dropdown.allBrands')}
                                         </SelectItem>
                                         {brands.map((brand) => (
                                             <SelectItem key={brand._id} value={brand._id}>
@@ -374,32 +416,44 @@ const CategoryProducts = () => {
                                 </Select>
                             </div>
                         )}
+                        {isDiscountCategory && (
+                            <div className="w-full md:w-64">
+                                <Select value={selectedCategoryFilter} onValueChange={(value) => updateParam("cat", value)}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder={t('categoryProducts.dropdown.filterByCat')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">
+                                            {t('categoryProducts.dropdown.allCat')}
+                                        </SelectItem>
 
+                                        {categories.map((cat) => (
+                                            <SelectItem key={cat._id} value={cat._id}>
+                                                {cat.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
                         {/* Size filter (always visible) */}
                         <div className="w-full md:w-64">
-                            <Select
-                                value={selectedSize}
-                                onValueChange={(value) => setSelectedSize(value)}
-                            >
+                            <Select value={selectedSize} onValueChange={(value) => updateParam("size", value)}>
                                 <SelectTrigger>
-                                    <SelectValue
-                                        placeholder={
-                                            language === "ar" ? "تصفية حسب المقاس" : "Filter by size"
-                                        }
-                                    />
+                                    <SelectValue placeholder={t('categoryProducts.dropdown.filterBySize')}/>
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">
-                                        {language === "ar" ? "كل المقاسات" : "All sizes"}
+                                        {t('categoryProducts.dropdown.allSizes')}
                                     </SelectItem>
                                     <SelectItem value="كبير">
-                                        {language === "ar" ? "كبير" : "Large"}
+                                        {t('categoryProducts.dropdown.large')}
                                     </SelectItem>
                                     <SelectItem value="وسط">
-                                        {language === "ar" ? "وسط" : "Medium"}
+                                        {t('categoryProducts.dropdown.med')}
                                     </SelectItem>
                                     <SelectItem value="صغير">
-                                        {language === "ar" ? "صغير" : "Small"}
+                                        {t('categoryProducts.dropdown.small')}
                                     </SelectItem>
                                 </SelectContent>
                             </Select>
@@ -407,26 +461,19 @@ const CategoryProducts = () => {
 
                         {/* 🔹 Sort dropdown (always visible) */}
                         <div className="w-full md:w-64">
-                            <Select
-                                value={sortOrder}
-                                onValueChange={(value) => setSortOrder(value)}
-                            >
+                            <Select value={sortOrder} onValueChange={(value) => updateParam("sort", value)}>
                                 <SelectTrigger>
-                                    <SelectValue
-                                        placeholder={
-                                            language === "ar" ? "ترتيب المنتجات" : "Sort products"
-                                        }
-                                    />
+                                    <SelectValue placeholder={t('categoryProducts.dropdown.orderProducts')}/>
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="latest">
-                                        {language === "ar" ? "الأحدث" : "Newest"}
+                                        {t('categoryProducts.dropdown.newest')}
                                     </SelectItem>
                                     <SelectItem value="oldest">
-                                        {language === "ar" ? "الأقدم" : "Oldest"}
+                                        {t('categoryProducts.dropdown.oldest')}
                                     </SelectItem>
                                     <SelectItem value="random">
-                                        {language === "ar" ? "عشوائي" : "Random"}
+                                        {t('categoryProducts.dropdown.random')}
                                     </SelectItem>
                                 </SelectContent>
                             </Select>
@@ -440,16 +487,12 @@ const CategoryProducts = () => {
 
                 {loading ? (
                     <div className="text-center py-12 text-muted-foreground">
-                        {language === "ar"
-                            ? "جاري تحميل المنتجات..."
-                            : "Loading products..."}
+                        {t('categoryProducts.dropdown.loadingProducts')}
                     </div>
                 ) : filteredProducts.length === 0 ? (
                     <div className="text-center py-12">
                         <p className="text-muted-foreground text-lg">
-                            {language === "ar"
-                                ? "لا توجد منتجات في هذا التصنيف"
-                                : "No products in this category"}
+                            {t('categoryProducts.dropdown.noProducts')}
                         </p>
                     </div>
                 ) : (

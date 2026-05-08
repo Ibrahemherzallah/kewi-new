@@ -9,7 +9,7 @@ import { Package } from "lucide-react";
 const Login = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { language } = useLanguage();
+  const { t,language } = useLanguage();
   const [formData, setFormData] = useState({
     phone: "",
     password: "",
@@ -20,11 +20,8 @@ const Login = () => {
 
     if (!formData.phone || !formData.password) {
       toast({
-        title: language === "ar" ? "خطأ" : "Error",
-        description:
-            language === "ar"
-                ? "الرجاء ملء جميع الحقول"
-                : "Please fill in all fields",
+        title: t('toast.err'),
+        description: t('toast.handleSubmit.err'),
         variant: "destructive",
       });
       return;
@@ -51,11 +48,8 @@ const Login = () => {
       localStorage.setItem("user", JSON.stringify(data.user));
 
       toast({
-        title: language === "ar" ? "مرحباً بك" : "Welcome",
-        description:
-            language === "ar"
-                ? "تم تسجيل الدخول بنجاح"
-                : "Logged in successfully",
+        title: t('toast.welcome'),
+        description: t('toast.welcome.login')
       });
 
       if (data.user.role === "admin") {
@@ -66,12 +60,8 @@ const Login = () => {
       }
     } catch (err: any) {
       toast({
-        title: language === "ar" ? "خطأ" : "Error",
-        description:
-            err.message ||
-            (language === "ar"
-                ? "بريد إلكتروني أو كلمة مرور غير صحيحة"
-                : "Invalid email or password"),
+        title: t('toast.err'),
+        description: err.message || t('toast.err.email'),
         variant: "destructive",
       });
     }
@@ -82,10 +72,10 @@ const Login = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mt-4">
-            {language === 'ar' ? 'تسجيل الدخول' : 'Login'}
+            {t('login.header')}
           </h1>
           <p className="text-muted-foreground mt-2">
-            {language === 'ar' ? 'للمسؤولين وتجار الجملة' : 'For Admin & Wholesalers'}
+            {t('login.desc')}
           </p>
         </div>
 
@@ -93,43 +83,43 @@ const Login = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="text-sm font-medium mb-2 block">
-                {language === 'ar' ? 'الرقم' : 'Phone'}
+                {t('login.field.phone')}
               </label>
               <Input
                 // type="email"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder={language === 'ar' ? 'أدخل رقمك' : 'Enter your phone number'}
+                placeholder={t('login.field.phone.placeholder')}
                 required
               />
             </div>
 
             <div>
               <label className="text-sm font-medium mb-2 block">
-                {language === 'ar' ? 'كلمة المرور' : 'Password'}
+                {t('login.field.password')}
               </label>
               <Input
                 type="password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder={language === 'ar' ? 'أدخل كلمة المرور' : 'Enter your password'}
+                placeholder={t('login.field.password.placeholder')}
                 required
               />
             </div>
 
             <Button type="submit" size="lg" className="w-full bg-primary hover:bg-primary/90">
-              {language === 'ar' ? 'تسجيل الدخول' : 'Login'}
+              {t('login.btnLogin')}
             </Button>
           </form>
 
           <div className="mt-6 text-center">
             <Link to="/" className="text-sm text-primary hover:underline block mb-2">
-              {language === "ar" ? "العودة إلى الصفحة الرئيسية" : "Back to Home"}
+              {t('login.back')}
             </Link>
             <span className="text-sm text-muted-foreground">
-              {language === "ar" ? "لا تمتلك حساباً؟" : "Don't have an account?"}{" "}
+              {t('login.dontHaveAccount')}{" "}
                         <Link to="/signup" className="text-primary hover:underline">
-                {language === "ar" ? "إنشاء حساب" : "Sign Up"}
+                {t('login.signUp')}
               </Link>
             </span>
           </div>

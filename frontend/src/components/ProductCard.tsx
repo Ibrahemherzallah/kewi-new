@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useFavorites } from "@/contexts/FavoritesContext";
 import { cn } from "@/lib/utils";
+import { useLocation } from "react-router-dom";
 
 interface ProductCardProps {
     product: any;
@@ -13,9 +14,9 @@ interface ProductCardProps {
 }
 
 export const ProductCard = ({product, showWholesale = false, onAddToCart,}: ProductCardProps) => {
-    const { language } = useLanguage();
+    const { t, language } = useLanguage();
     const { toggleFavorite, isFavorite } = useFavorites();
-
+    const location = useLocation();
     // --------- NORMALIZATION HELPERS ----------
 
     // id to use for URL / favorites
@@ -101,6 +102,14 @@ export const ProductCard = ({product, showWholesale = false, onAddToCart,}: Prod
                 ? "قريباً"
                 : "متوفر";
 
+    const badgeHe = product?.isSoldOut
+        ? "הַכַּרטִיסִים אָזלוּ"
+        : product?.isOnSale
+            ? "בִּמְכִירָה"
+            : product?.isSoon
+                ? "בקרוב"
+                : "זָמִין";
+
     // stock: either stockNumber or warehouse+kewi
     const totalStock: number = product.stockNumber ?? (product.warehouseQty ?? 0) + (product.kewiQty ?? 0);
 
@@ -131,12 +140,12 @@ export const ProductCard = ({product, showWholesale = false, onAddToCart,}: Prod
             // show sale price if exists
             mainPrice = salePrice;
             secondaryPrice = customerPrice;
-            mainLabel = language === "ar" ? "خصم عيد الميلاد 🎉" : "Birthday Offer 🎉";
+            mainLabel = t('productCard.birthdayOffer');
         } else {
             // if no sale, give him wholesale price as gift
             mainPrice = wholesalerPrice;
             secondaryPrice = customerPrice;
-            mainLabel = language === "ar" ? "هدية عيد الميلاد 🎁" : "Birthday Gift 🎁";
+            mainLabel = t('productCard.birthdayOffer.desc');
         }
     }
 
@@ -144,14 +153,14 @@ export const ProductCard = ({product, showWholesale = false, onAddToCart,}: Prod
     else if (isWholesalerUser) {
         mainPrice = wholesalerPrice;
         secondaryPrice = customerPrice;
-        mainLabel = language === "ar" ? "سعر الجملة" : "Wholesale";
+        mainLabel = t('productCard.wholesalePrice');
     }
 
 // 🔥 Normal sale rule
     else if (isOnSale && salePrice != null) {
         mainPrice = salePrice;
         secondaryPrice = customerPrice;
-        mainLabel = language === "ar" ? "سعر العرض" : "Sale price";
+        mainLabel = t('productCard.salePrice');
     }
 
 // 💰 Normal price
@@ -173,16 +182,9 @@ export const ProductCard = ({product, showWholesale = false, onAddToCart,}: Prod
     const canAddToCart = !isSoldOut && totalStock > 0;
 
     return (
-        <div
-            className={cn(
-                "group product-card-hover bg-card rounded-2xl overflow-hidden border border-border shadow-soft relative",
-                isSoldOut && "opacity-80"
-            )}
-        >
+        <div className={cn("group product-card-hover bg-card rounded-2xl overflow-hidden border border-border shadow-soft relative", isSoldOut && "opacity-80")}>
             {/* Favorite Button */}
-            <button
-                onClick={handleFavoriteClick}
-                className={cn(
+            <button onClick={handleFavoriteClick} className={cn(
                     "absolute top-3 right-3 z-10 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300",
                     "bg-background/80 backdrop-blur-sm hover:bg-background shadow-md",
                     isFav && "text-red-500"
@@ -201,32 +203,28 @@ export const ProductCard = ({product, showWholesale = false, onAddToCart,}: Prod
             {/* SALE / SOLD OUT BADGES */}
             {isOnSale && !isSoldOut && (
                 <Badge className="absolute top-3 left-3 z-10 bg-red-500 text-white">
-                    {language === "ar" ? "عرض" : "Sale"}
+                    {t('productCard.sale')}
                 </Badge>
             )}
             {isSoldOut && (
                 <Badge className="absolute top-3 left-3 z-10 bg-gray-700 text-white">
-                    {language === "ar" ? "نفذت الكمية" : "Sold out"}
+                    {t('productCard.soldOut')}
                 </Badge>
             )}
 
-            <Link to={`/product/${mongoId ? mongoId : productId}`}>
+            <Link to={`/product/${mongoId ? mongoId : productId}${location.search}`}>
                 <div className="aspect-square overflow-hidden bg-muted flex items-center justify-center relative">
                     {mainImage ? (
-                        <img
-                            src={mainImage}
-                            alt={name}
-                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        />
+                        <img src={mainImage} alt={name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"/>
                     ) : (
                         <span className="text-xs text-muted-foreground">
-                          {language === "ar" ? "لا توجد صورة" : "No image"}
+                            {t('productCard.noImg')}
                         </span>
                                 )}
 
                     {isSoldOut && (
                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white font-semibold text-lg">
-                            {language === "ar" ? "غير متوفر" : "Unavailable"}
+                            {t('productCard.unavailable')}
                         </div>
                     )}
                 </div>
@@ -234,10 +232,7 @@ export const ProductCard = ({product, showWholesale = false, onAddToCart,}: Prod
 
             <div className="p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
-                    <Link
-                        to={`/product/${mongoId ? mongoId : productId}`}
-                        className="flex-1"
-                    >
+                    <Link to={`/product/${mongoId ? mongoId : productId}`} className="flex-1">
                         <h3 className="font-semibold text-card-foreground group-hover:text-primary transition-colors">
                             {name}
                         </h3>
@@ -261,13 +256,13 @@ export const ProductCard = ({product, showWholesale = false, onAddToCart,}: Prod
                             }
                             className="text-xs"
                         >
-                            {language === "ar" ? badgeAr : badgeEn}
+                            {language === "ar" ? badgeAr : language === "he" ? badgeHe : badgeEn}
                         </Badge>
                     )}
                     {brandLabel && (
                         <span className="text-xs text-muted-foreground">
-              {brandLabel}
-            </span>
+                          {brandLabel}
+                        </span>
                     )}
                 </div>
 

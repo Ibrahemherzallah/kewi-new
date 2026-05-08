@@ -11,17 +11,17 @@ export const Footer = () => {
 
   const footerLinks = {
     shop: [
-      { name: { en: 'Handbags', ar: 'حقائب اليد' }, path: '/category/67fd7361d3d9f99f95edff41' },
-      { name: { en: 'Travel Bags', ar: 'حقائب السفر' }, path: '/category/680fd54f4dde5779298c2701' },
-      { name: { en: 'Perfumes', ar: 'العطور' }, path: '/category/6803f9c535efe305218f99f2' },
-      { name: { en: 'Accessories', ar: 'الإكسسوارات' }, path: '/category/67ff75611520f910df910f88' },
+      { name: { en: 'Handbags', ar: 'حقائب اليد', he: 'תיקי יד' }, path: '/category/67fd7361d3d9f99f95edff41' },
+      { name: { en: 'Travel Bags', ar: 'حقائب السفر', he: 'תיקי נסיעות' }, path: '/category/680fd54f4dde5779298c2701' },
+      { name: { en: 'Perfumes', ar: 'العطور' , he: 'תַמרוּקִים'}, path: '/category/6803f9c535efe305218f99f2' },
+      { name: { en: 'Accessories', ar: 'الإكسسوارات', he: 'אביזרים' }, path: '/category/67ff75611520f910df910f88' },
     ],
     company: [
-      { name: { en: 'About Us', ar: 'من نحن' }, path: '/about' },
-      { name: { en: 'Delivery Terms', ar: 'شروط التوصيل' }, path: '/delivery-terms' },
-      { name: { en: 'Privacy Policy', ar: 'سياسة الخصوصية' }, path: '/privacy-policy' },
-      { name: { en: 'Return Policy', ar: 'سياسة الإرجاع' }, path: '/return-policy' },
-      { name: { en: 'Contact', ar: 'اتصل بنا' }, path: 'https://wa.me/972599128813' },
+      { name: { en: 'About Us', ar: 'من نحن', he: 'אודותינו' }, path: '/about' },
+      { name: { en: 'Delivery Terms', ar: 'شروط التوصيل', he: 'תנאי משלוח' }, path: '/delivery-terms' },
+      { name: { en: 'Privacy Policy', ar: 'سياسة الخصوصية', he: 'מדיניות הפרטיות' }, path: '/privacy-policy' },
+      { name: { en: 'Return Policy', ar: 'سياسة الإرجاع', he: 'מדיניות החזרה' }, path: '/return-policy' },
+      { name: { en: 'Contact', ar: 'اتصل بنا', he: 'צרו קשר' }, path: 'https://wa.me/972599128813' },
     ],
   };
 
@@ -35,9 +35,7 @@ export const Footer = () => {
               Kewi
             </h3>
             <p className="text-muted-foreground text-sm">
-              {language === 'en' 
-                ? 'Your trusted destination for premium handbags, travel bags, and accessories.'
-                : 'وجهتك الموثوقة للحقائب الفاخرة وحقائب السفر والإكسسوارات.'}
+              {t('footer.desc')}
             </p>
             <div className="flex gap-4">
               <a href="https://www.facebook.com/kewi.jenin" className="text-muted-foreground hover:text-primary transition-colors">
@@ -55,7 +53,7 @@ export const Footer = () => {
           {/* Shop Links */}
           <div>
             <h4 className="font-semibold mb-4">
-              {language === 'en' ? 'Shop' : 'تسوق'}
+              {t('footer.shop')}
             </h4>
             <ul className="space-y-2">
               {footerLinks.shop.map((link, index) => (
@@ -71,7 +69,7 @@ export const Footer = () => {
           {/* Company Links */}
           <div>
             <h4 className="font-semibold mb-4">
-              {language === 'en' ? 'Company' : 'الشركة'}
+              {t('footer.company')}
             </h4>
             <ul className="space-y-2">
               {footerLinks.company.map((link, index) => (
@@ -87,7 +85,7 @@ export const Footer = () => {
           {/* Contact Info */}
           <div>
             <h4 className="font-semibold mb-4">
-              {language === 'en' ? 'Contact Us' : 'اتصل بنا'}
+              {t('footer.contact')}
             </h4>
             <ul className="space-y-3">
               <li className="flex items-center gap-2 text-muted-foreground text-sm">
@@ -100,7 +98,7 @@ export const Footer = () => {
               </li>
               <li className="flex items-center gap-2 text-muted-foreground text-sm">
                 <MapPin className="h-4 w-4" />
-                <span>{language === 'en' ? 'Palestine' : 'فلسطين'}</span>
+                <span>{t('footer.pal')}</span>
               </li>
               <div className="flex gap-3 mt-6">
                 <img src={visa} className="h-6" />
@@ -112,9 +110,11 @@ export const Footer = () => {
 
         <div className="border-t border-border mt-8 pt-8 text-center text-muted-foreground text-sm">
           <p>
-            {language === 'en' 
+            {language === 'en'
               ? `© ${new Date().getFullYear()} Kewi. All rights reserved.`
-              : `© ${new Date().getFullYear()} Kewi. جميع الحقوق محفوظة.`}
+              : language === 'ar' ? `© ${new Date().getFullYear()} Kewi. جميع الحقوق محفوظة.`
+              : `© ${new Date().getFullYear()} Kewi. כֹּל הַזְכוּיוֹת שְׁמוּרוֹת.`
+            }
           </p>
         </div>
       </div>
