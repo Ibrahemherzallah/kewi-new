@@ -139,15 +139,12 @@ const Products = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, [])
 
-  console.log("TTTTTTTTTTT sortType is : ", sortType)
   const getRandomRank = (id: string) => {
     if (randomRankRef.current[id] == null) {
       randomRankRef.current[id] = Math.random();
     }
     return randomRankRef.current[id];
   };
-
-
 
   const sortProducts = (list: ApiProduct[]) => {
     const arr = [...list];
@@ -203,6 +200,7 @@ const Products = () => {
 
     return sortProducts(filtered);
   }, [products, searchQuery, selectedCategoryId, sortType]);
+
   const getProductName = (product: BackendProduct, language: string) => {
     if (!product.name) return language === "ar" ? "منتج بدون اسم" : "Unnamed product";
     if (typeof product.name === "string") return product.name;
@@ -287,32 +285,22 @@ const Products = () => {
           <div className="mb-8">
             <div className="text-center mb-4">
               <h2 className="text-2xl font-bold">
-                {language === "ar" ? "ما الذي تبحث عنه اليوم؟" : "What are you shopping for today?"}
+                {t('products.whatYouSearch')}
               </h2>
             </div>
 
             <div className="w-full overflow-x-auto pb-2">
               <div className="flex gap-6 min-w-max justify-center md:justify-start">
                 {categories.map((cat) => (
-                    <button
-                        key={cat._id}
-                        onClick={() => handleCategoryClick(cat)}
-                        className="flex flex-col items-center group focus:outline-none"
-                    >
-                      <div
-                          className={[
-                            "w-20 h-20 rounded-full overflow-hidden border-2 transition-all duration-300",
+                    <button key={cat._id} onClick={() => handleCategoryClick(cat)} className="flex flex-col items-center group focus:outline-none">
+                      <div className={["w-20 h-20 rounded-full overflow-hidden border-2 transition-all duration-300",
                             selectedCategoryId === cat._id
                                 ? "border-primary shadow-lg scale-105"
                                 : "border-muted-foreground/20 group-hover:border-primary/80 group-hover:shadow-md",
                           ].join(" ")}
                       >
                         {cat.image ? (
-                            <img
-                                src={cat.image}
-                                alt={cat.name}
-                                className="w-full h-full object-cover"
-                            />
+                            <img src={cat.image} alt={cat.name} className="w-full h-full object-cover"/>
                         ) : (
                             <div className="w-full h-full flex items-center justify-center bg-muted text-xs text-muted-foreground">
                               {cat.name}
@@ -330,17 +318,12 @@ const Products = () => {
 
           {/* 🔎 Search + Sort */}
           <div className="mb-8 flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
-
             {/* 🔍 Search */}
             <div className="relative w-full md:max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                   type="text"
-                  placeholder={
-                    language === "ar"
-                        ? "ابحث في المنتجات..."
-                        : "Search products..."
-                  }
+                  placeholder={t('products.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 h-11"
@@ -349,31 +332,23 @@ const Products = () => {
 
             {/* 🔽 Order Filter */}
             <div className="w-full md:w-56">
-              <Select
-                  value={sortType}
-                  onValueChange={(value) => setSortType(value)}
-              >
+              <Select value={sortType} onValueChange={(value) => setSortType(value)}>
                 <SelectTrigger className="h-11">
-                  <SelectValue
-                      placeholder={
-                        language === "ar" ? "ترتيب المنتجات" : "Sort products"
-                      }
-                  />
+                  <SelectValue placeholder={t('products.sortProducts')}/>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="random">
-                    {language === "ar" ? "عشوائي" : "Random"}
+                    {t('products.random')}
                   </SelectItem>
                   <SelectItem value="latest">
-                    {language === "ar" ? "الأحدث" : "Newest"}
+                    {t('products.latest')}
                   </SelectItem>
                   <SelectItem value="oldest">
-                    {language === "ar" ? "الأقدم" : "Oldest"}
+                    {t('products.oldest')}
                   </SelectItem>
                 </SelectContent>
               </Select>
             </div>
-
           </div>
 
           {error && (
@@ -384,23 +359,19 @@ const Products = () => {
 
           {loading ? (
               <div className="text-center py-12 text-muted-foreground">
-                {language === "ar" ? "جاري تحميل المنتجات..." : "Loading products..."}
+                {t('products.oldest')}
               </div>
           ) : filteredProducts.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-muted-foreground text-lg">
-                  {language === "ar" ? "لم يتم العثور على منتجات" : "No products found"}
+                  {t('products.noProducts')}
                 </p>
               </div>
           ) : (
 
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredProducts.slice(0, visibleCount).map((product) => (
-                    <ProductCard
-                        key={product._id}
-                        product={product as any}
-                        onAddToCart={handleAddToCart}
-                    />
+                    <ProductCard key={product._id} product={product as any} onAddToCart={handleAddToCart}/>
                 ))}
               </div>
           )}

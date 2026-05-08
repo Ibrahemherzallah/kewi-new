@@ -7,7 +7,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 
 export const LoyaltyCard = () => {
   const { points, getDiscount, getNextMilestone, canRedeemFreeProduct } = useLoyalty();
-  const { language } = useLanguage();
+  const { t, language } = useLanguage();
   const discount = getDiscount();
   const nextMilestone = getNextMilestone();
 
@@ -28,7 +28,7 @@ export const LoyaltyCard = () => {
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2">
           <Star className="h-5 w-5 text-primary" />
-          {language === 'ar' ? 'نقاط الولاء' : 'Loyalty Points'}
+          {t('loyaltyCard.header')}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -37,13 +37,13 @@ export const LoyaltyCard = () => {
           <div>
             <p className="text-4xl font-bold text-primary">{points}</p>
             <p className="text-sm text-muted-foreground">
-              {language === 'ar' ? 'النقاط المتوفرة' : 'Available Points'}
+              {t('loyaltyCard.availablePoints')}
             </p>
           </div>
         {canRedeemFreeProduct && (
           <Badge className="bg-gradient-to-r from-primary to-secondary text-primary-foreground">
             <Gift className="h-3 w-3 mr-1" />
-            {language === 'ar' ? 'منتج مجاني!' : 'Free Product!'}
+            {t('loyaltyCard.freeProduct')}
           </Badge>
         )}
       </div>
@@ -52,11 +52,11 @@ export const LoyaltyCard = () => {
         {discount.type !== 'none' && (
           <div className="bg-background/60 rounded-lg p-3">
             <p className="text-sm font-medium">
-              {language === 'ar' ? 'خصمك الحالي:' : 'Your current discount:'}
+              {t('loyaltyCard.currentDiscount')}
             </p>
             <p className="text-2xl font-bold text-primary">
               {discount.type === 'free_product' 
-                ? (language === 'ar' ? 'منتج مجاني!' : 'Free Product!')
+                ? t('loyaltyCard.freeProduct')
                 : `${discount.percentage}%`
               }
             </p>
@@ -69,26 +69,23 @@ export const LoyaltyCard = () => {
             <div className="flex items-center justify-between text-sm">
               <span className="flex items-center gap-1 text-muted-foreground">
                 <TrendingUp className="h-4 w-4" />
-                {language === 'ar' ? 'المكافأة القادمة' : 'Next Reward'}
+                {t('loyaltyCard.nextMilestone.nextReward')}
               </span>
               <span className="font-medium">{nextMilestone.reward}</span>
             </div>
             <Progress value={getProgressToNext()} className="h-2" />
             <p className="text-xs text-muted-foreground text-center">
-              {language === 'ar' 
-                ? `تحتاج ${nextMilestone.pointsNeeded} نقطة للحصول على ${nextMilestone.reward}`
-                : `${nextMilestone.pointsNeeded} points to unlock ${nextMilestone.reward}`
-              }
+              {t("loyalty.nextMilestone", {
+                points: nextMilestone.pointsNeeded,
+                reward: nextMilestone.reward,
+              })}
             </p>
           </div>
         )}
 
         {/* Points earning info */}
         <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-2 text-center">
-          {language === 'ar' 
-            ? 'اكسب 2 نقطة لكل 50 شيكل تنفقها'
-            : 'Earn 2 points for every 50 shekels spent'
-          }
+          {t('loyaltyCard.nextMilestone.nextReward.desc')}
         </div>
       </CardContent>
     </Card>

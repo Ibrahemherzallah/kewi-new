@@ -1,4 +1,3 @@
-// src/pages/Favorites.tsx (or wherever it is)
 import { Navbar } from "@/components/Navbar";
 import { ProductCard } from "@/components/ProductCard";
 import { useFavorites } from "@/contexts/FavoritesContext";
@@ -7,13 +6,14 @@ import { useToast } from "@/hooks/use-toast";
 import { Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+
 type BackendProduct = {
   _id: string;
-  id?: string; // your internal code "9999" etc.
+  id?: string;
   name?: string | { en: string; ar: string };
   description?: string | { en: string; ar: string };
-  image?: string[];     // from DB
-  images?: string[];    // in case some endpoints use this
+  image?: string[];
+  images?: string[];
   stockNumber?: number;
   customerPrice?: number;
   wholesalerPrice?: number;
@@ -28,7 +28,7 @@ type BackendProduct = {
 };
 
 const Favorites = () => {
-  const { favorites } = useFavorites();        // now favorites = array of full products
+  const { favorites } = useFavorites();
   const { t,language } = useLanguage();
   const { toast } = useToast();
 
@@ -61,11 +61,9 @@ const Favorites = () => {
 
     // 🟦 1) Auto-select variant if multi color
     const isMulti = product.isMultiColor && Array.isArray(product.variants);
-    console.log("isMulti is :" , isMulti)
     const selectedVariant = isMulti && product.variants.length > 0
         ? product.variants[0]          // 👈 first variant by default
         : null;
-    console.log("isMulti selectedVariant is :" , selectedVariant)
 
     // 🟦 2) Choose correct images
     const variantImage = selectedVariant?.image ? [selectedVariant.image] : [];
@@ -122,12 +120,10 @@ const Favorites = () => {
           <div className="mb-8">
             <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
               <Heart className="h-9 w-9 text-red-500 fill-red-500" />
-              {language === "ar" ? "المفضلة" : "Favorites"}
+              {t('favorites.header')}
             </h1>
             <p className="text-muted-foreground">
-              {language === "ar"
-                  ? "منتجاتك المفضلة محفوظة هنا"
-                  : "Your favorite products are saved here"}
+              {t('favorites.desc')}
             </p>
           </div>
 
@@ -135,13 +131,11 @@ const Favorites = () => {
               <div className="text-center py-16">
                 <Heart className="h-24 w-24 mx-auto text-muted-foreground mb-4" />
                 <p className="text-xl text-muted-foreground mb-6">
-                  {language === "ar"
-                      ? "لا توجد منتجات مفضلة"
-                      : "No favorite products yet"}
+                  {t('favorites.noFav')}
                 </p>
                 <Link to="/products">
                   <Button size="lg">
-                    {language === "ar" ? "تصفح المنتجات" : "Browse Products"}
+                    {t('favorites.browseProducts')}
                   </Button>
                 </Link>
               </div>

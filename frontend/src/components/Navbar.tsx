@@ -48,6 +48,7 @@ export const Navbar = ({ cartCount = 0 }: NavbarProps) => {
 
     loadCart();
   });
+
   const handleUserClick = () => {
     if (!isLoggedIn || !role) {
       // Guest → go to login
@@ -84,11 +85,7 @@ export const Navbar = ({ cartCount = 0 }: NavbarProps) => {
                 </span>
               </div>
               <span className="font-bold text-xl text-foreground">
-                  <img
-                      src={theme === "dark" ? logoTextWhite : logoText}
-                      className={theme === "dark" ? "w-40 h-40" : "w-20 h-4"}
-                      alt="logo text"
-                  />
+                  <img src={theme === "dark" ? logoTextWhite : logoText} className={theme === "dark" ? "w-40 h-40" : "w-20 h-4"} alt="logo text"/>
               </span>
             </Link>
 
@@ -103,7 +100,7 @@ export const Navbar = ({ cartCount = 0 }: NavbarProps) => {
 
               {/* Orders: smart behavior based on login */}
               <button onClick={handleOrdersClick} className="text-foreground hover:text-primary transition-colors">
-                {language === "ar" ? "الطلبات" : "Orders"}
+                {t("nav.orders")}
               </button>
 
               <Link to="/about" className="text-foreground hover:text-primary transition-colors">
@@ -167,7 +164,7 @@ export const Navbar = ({ cartCount = 0 }: NavbarProps) => {
 
                   <Link to="/favorites" className="px-4 py-2 hover:bg-muted rounded-lg transition-colors flex items-center gap-2" onClick={() => setMobileMenuOpen(false)}>
                     <Heart className="h-4 w-4" />
-                    {language === "ar" ? "المفضلة" : "Favorites"}
+                    {t("nav.favorite")}
                   </Link>
 
                   {/* Mobile Orders: same smart behavior */}
@@ -178,7 +175,7 @@ export const Navbar = ({ cartCount = 0 }: NavbarProps) => {
                       }}
                   >
                     <History className="h-4 w-4" />
-                    {language === "ar" ? "الطلبات" : "Orders"}
+                    {t("nav.orders")}
                   </button>
 
                   <Link to="/about" className="px-4 py-2 hover:bg-muted rounded-lg transition-colors" onClick={() => setMobileMenuOpen(false)}>

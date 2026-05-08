@@ -44,10 +44,6 @@ interface CheckoutFormData {
   paymentMethod: string;
 }
 
-interface City {
-  name: string;
-  region: "w" | "d" | "q";
-}
 const FREE_PRODUCT_POINTS_COST = 100;
 const Cart = () => {
   const { t, language } = useLanguage();
@@ -70,20 +66,19 @@ const Cart = () => {
     notes: "",
     paymentMethod: "cash",
   });
-  // Cities / regions
   const [cities] = useState([
-    { name: { ar: "الضفة الغربية", en: "West Bank" }, region: "w" },
-    { name: { ar: "الداخل", en: "48 Territories" }, region: "d" },
-    { name: { ar: "القدس", en: "Jerusalem" }, region: "q" },
+    { name: { ar: "الضفة الغربية", en: "West Bank", he: 'הגדה המערבית' }, region: "w" },
+    { name: { ar: "الداخل", en: "48 Territories" , he: '48 טריטוריות'}, region: "d" },
+    { name: { ar: "القدس", en: "Jerusalem" , he: 'יְרוּשָׁלַיִם'}, region: "q" },
   ]);
   const [deliveryTypes] = useState([
     {
-      name: { ar: "مستعجل", en: "Express" },
-      duration: { ar: "1 - 2 يوم", en: "1 - 2 days" }
+      name: { ar: "مستعجل", en: "Express" , he: 'אֶקְסְפּרֶס'},
+      duration: { ar: "1 - 2 يوم", en: "1 - 2 days", he: '1-2 ימים' }
     },
     {
-      name: { ar: "عادي", en: "Standard" },
-      duration: { ar: "3 - 5 يوم", en: "3 - 5 days" }
+      name: { ar: "عادي", en: "Standard" , he: 'תֶקֶן'},
+      duration: { ar: "3 - 5 يوم", en: "3 - 5 days", he: '3 - 5 ימים' }
     }
   ]);
   const [selectedRegion, setSelectedRegion] = useState<string>("");
@@ -424,11 +419,10 @@ const Cart = () => {
       const name = getItemName(outOfStockItem);
 
       toast({
-        title: language === "ar" ? "الكمية غير متاحة" : "Insufficient stock",
-        description:
-            language === "ar"
-                ? `الكمية المطلوبة من المنتج "${name}" أكبر من الكمية المتوفرة في المخزون.`
-                : `The requested quantity for "${name}" is greater than the available stock.`,
+        title: t("toast.err.insufficientStock"),
+        description: t("toast.err.insufficientStock.desc", {
+          name,
+        }),
         variant: "destructive",
       });
 
@@ -464,8 +458,8 @@ const Cart = () => {
 
       if (formData.phone.length < 10) {
         toast({
-          title: "رقم الهاتف غير صالح",
-          description: "رقم الهاتف يجب أن لا يقل عن 10 أرقام",
+          title: t('toast.err.phoneNotValid'),
+          description: t('toast.err.phoneNotValid.desc'),
           variant: "destructive",
         });
         setLoading(false);
@@ -524,11 +518,8 @@ const Cart = () => {
         });
       } else {
         toast({
-          title: language === "ar" ? "خطأ في الدفع" : "Payment error",
-          description:
-              language === "ar"
-                  ? "يرجى اختيار طريقة دفع صحيحة"
-                  : "Please select a valid payment method.",
+          title: t('toast.err.paymentError'),
+          description: t('toast.err.paymentError.desc'),
           variant: "destructive",
         });
       }
@@ -554,11 +545,10 @@ const Cart = () => {
 
     if (points < pointsCost) {
       toast({
-        title: language === "ar" ? "نقاط غير كافية" : "Not enough points",
-        description:
-            language === "ar"
-                ? `تحتاج ${pointsCost} نقطة للحصول على المنتج المجاني`
-                : `You need ${pointsCost} points to get the free product.`,
+        title: ('toast.err.notEnoughPoints'),
+        description: t("cart.loyaltyPoints.needPointsForFreeProduct", {
+          points: pointsCost,
+        }),
         variant: "destructive",
       });
       return;
@@ -566,11 +556,8 @@ const Cart = () => {
 
     if (!token) {
       toast({
-        title: language === "ar" ? "غير مسجل" : "Not logged in",
-        description:
-            language === "ar"
-                ? "الرجاء تسجيل الدخول لاستخدام نقاط الولاء"
-                : "Please log in to use your loyalty points.",
+        title: t('toast.err.notLoggedIn'),
+        description: t('toast.err.notLoggedIn.desc'),
         variant: "destructive",
       });
       return;
@@ -620,18 +607,14 @@ const Cart = () => {
       setPendingFreeProductId(null);
 
       toast({
-        title:
-            language === "ar"
-                ? "تم تطبيق المنتج المجاني"
-                : "Free product applied",
-        description:
-            language === "ar"
-                ? `تم خصم ${pointsCost} نقطة من رصيدك`
-                : `${pointsCost} points were deducted from your balance.`,
+        title: t('toast.suc.doneFreeProduct'),
+        description: t("cart.loyaltyPoints.pointsDeducted", {
+          points: pointsCost,
+        }),
       });
     } catch (err: any) {
       toast({
-        title: language === "ar" ? "خطأ" : "Error",
+        title: t('toast.err'),
         description: err?.message,
         variant: "destructive",
       });
@@ -657,11 +640,10 @@ const Cart = () => {
     // Check locally first
     if (points < pointsCost) {
       toast({
-        title: language === "ar" ? "نقاط غير كافية" : "Not enough points",
-        description:
-            language === "ar"
-                ? `تحتاج على الأقل ${pointsCost} نقطة لتطبيق هذا الخصم`
-                : `You need at least ${pointsCost} points to apply this discount.`,
+        title: t('toast.err.notEnoughPoints'),
+        description: t("toast.err.notEnoughPoints.desc", {
+          points: pointsCost,
+        }),
         variant: "destructive",
       });
       setConfirmDiscountOpen(false);
@@ -669,16 +651,12 @@ const Cart = () => {
     }
 
     try {
-      const token =
-          typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
       if (!token) {
         toast({
-          title: language === "ar" ? "غير مسجل" : "Not logged in",
-          description:
-              language === "ar"
-                  ? "الرجاء تسجيل الدخول لاستخدام نقاط الولاء"
-                  : "Please log in to use your loyalty points.",
+          title: t('toast.err.notLoggedIn'),
+          description: t('toast.err.notLoggedIn.desc'),
           variant: "destructive",
         });
         setConfirmDiscountOpen(false);
@@ -700,11 +678,8 @@ const Cart = () => {
       if (!res.ok) {
         const errData = await res.json().catch(() => null);
         throw new Error(
-            errData?.message ||
-            (language === "ar"
-                ? "فشل في استخدام النقاط"
-                : "Failed to use loyalty points")
-        );
+            errData?.message || t('toast.err.fieldUsePoints')
+        )
       }
 
       const result = await res.json();
@@ -718,21 +693,17 @@ const Cart = () => {
       setConfirmDiscountOpen(false);
 
       toast({
-        title: language === "ar" ? "تم تطبيق الخصم" : "Discount applied",
+        title: t("toast.suc.doneDiscount"),
         description:
-            language === "ar"
-                ? `تم خصم ${pointsCost} نقطة من رصيدك`
-                : `${pointsCost} points were deducted from your balance.`,
+            t("cart.loyaltyPoints.pointsDeducted", {
+              points: pointsCost,
+            }),
       });
     } catch (err: any) {
       console.error("Error redeeming discount:", err);
       toast({
-        title: language === "ar" ? "خطأ" : "Error",
-        description:
-            err?.message ||
-            (language === "ar"
-                ? "فشل في تطبيق الخصم باستخدام النقاط"
-                : "Failed to apply discount using points."),
+        title: t("toast.err"),
+        description: err?.message ||  t("toast.suc.fieldApplyDiscount"),
         variant: "destructive",
       });
     }
@@ -752,19 +723,15 @@ const Cart = () => {
               <div className="mb-8 p-4 rounded-2xl bg-primary/10 border border-primary/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div>
                   <p className="font-semibold">
-                    {language === "ar"
-                        ? "انضم إلينا لتحصل على مزايا الاشتراك"
-                        : "Sign up to unlock member benefits"}
+                    {t('cart.joinUs')}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {language === "ar"
-                        ? "سجّل حساباً لتحصل على نقاط مع كل عملية شراء، خصومات حصرية وهدايا مجانية."
-                        : "Create an account to earn points on every order, get exclusive discounts, and unlock free gifts."}
+                    {t('cart.joinUs.desc')}
                   </p>
                 </div>
                 <Link to="/signup">
                   <Button size="sm" className="whitespace-nowrap">
-                    {language === "ar" ? "إنشاء حساب" : "Create account"}
+                    {t('cart.joinUs.createAccount')}
                   </Button>
                 </Link>
               </div>
@@ -794,7 +761,7 @@ const Cart = () => {
                           {freeProductId === id && (
                               <Badge className="absolute top-2 left-2 bg-primary">
                                 <Gift className="h-3 w-3 mr-1" />
-                                {language === "ar" ? "مجاني!" : "FREE!"}
+                                {t("cart.freeProduct")}
                               </Badge>
                           )}
 
@@ -817,32 +784,19 @@ const Cart = () => {
                             </div>
 
                             <div className="flex items-center gap-2 mt-4">
-                              <Button
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={() => updateQuantity(id, -1)}
-                              >
+                              <Button variant="outline" size="icon" onClick={() => updateQuantity(id, -1)}>
                                 <Minus className="h-4 w-4" />
                               </Button>
                               <span className="w-12 text-center font-medium">
                                 {item.quantity}
                               </span>
-                              <Button
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={() => updateQuantity(id, 1)}
-                              >
+                              <Button variant="outline" size="icon" onClick={() => updateQuantity(id, 1)}>
                                 <Plus className="h-4 w-4" />
                               </Button>
                             </div>
                           </div>
 
-                          <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeItem(id)}
-                              className="text-destructive hover:bg-destructive/10"
-                          >
+                          <Button variant="ghost" size="icon" onClick={() => removeItem(id)} className="text-destructive hover:bg-destructive/10">
                             <Trash2 className="h-5 w-5" />
                           </Button>
                         </div>
@@ -859,16 +813,14 @@ const Cart = () => {
                             <div className="flex items-center gap-2 mb-2">
                               <Star className="h-5 w-5 text-primary" />
                               <span className="font-semibold">
-                                {language === "ar" ? "نقاط الولاء" : "Loyalty Points"}
+                                {t('cart.loyaltyPoints')}
                               </span>
                               <Badge variant="secondary">{points} pts</Badge>
                             </div>
 
                             {!isLoggedIn && (
                                 <p className="text-xs text-muted-foreground mb-2">
-                                  {language === "ar"
-                                      ? "سجّل دخولك أو أنشئ حساباً لبدء جمع النقاط."
-                                      : "Log in or create an account to start collecting points."}
+                                  {t('cart.loyaltyPoints.createAccount')}
                                 </p>
                             )}
 
@@ -877,24 +829,16 @@ const Cart = () => {
                                 <div className="mb-3 p-3 bg-background/60 rounded-lg">
                                   <p className="text-sm font-medium mb-2 flex items-center gap-1">
                                     <Gift className="h-4 w-4 text-primary" />
-                                    {language === "ar"
-                                        ? "اختر منتج مجاني (100 نقطة)"
-                                        : "Choose a free product (100 pts)"}
+                                    {t('cart.loyaltyPoints.pickFreeProduct')}
                                   </p>
                                   <RadioGroup value={freeProductId || ""} onValueChange={handleSelectFreeProduct}>
                                     {cart.map((item) => {
                                       const id = getItemId(item);
                                       const { mainPrice } = getPricesForItem(item);
                                       return (
-                                          <div
-                                              key={id}
-                                              className="flex items-center space-x-2"
-                                          >
+                                          <div key={id} className="flex items-center space-x-2">
                                             <RadioGroupItem value={id} id={`free-${id}`} />
-                                            <Label
-                                                htmlFor={`free-${id}`}
-                                                className="text-sm cursor-pointer"
-                                            >
+                                            <Label htmlFor={`free-${id}`} className="text-sm cursor-pointer">
                                               {getItemName(item)} ({mainPrice.toFixed(2)} ₪)
                                             </Label>
                                           </div>
@@ -905,9 +849,7 @@ const Cart = () => {
                             )}
 
                             {/* Percentage Discount Option */}
-                            {isLoggedIn &&
-                                discount.percentage > 0 &&
-                                discount.type === "discount" &&
+                            {isLoggedIn && discount.percentage > 0 && discount.type === "discount" &&
                                 !freeProductId && (
                                     <div className="p-3 bg-background/60 rounded-lg">
                                       <Button
@@ -934,9 +876,7 @@ const Cart = () => {
 
                             {discount.type === "none" && (
                                 <p className="text-sm text-muted-foreground">
-                                  {language === "ar"
-                                      ? "اجمع 20 نقطة للحصول على خصم 20%"
-                                      : "Collect 20 points to get 20% off"}
+                                  {t('cart.loyaltyPoints.collectPointsToApplyDiscount')}
                                 </p>
                             )}
                           </div>
@@ -959,9 +899,7 @@ const Cart = () => {
                       <span className="flex items-center gap-1">
                         <Tag className="h-4 w-4" />
                         {freeProductId
-                            ? language === "ar"
-                                ? "منتج مجاني"
-                                : "Free product"
+                            ? t('cart.loyaltyPoints.freeProduct')
                             : language === "ar"
                                 ? `خصم ${appliedDiscountPercentage}%`
                                 : `${appliedDiscountPercentage}% discount`}
@@ -972,7 +910,7 @@ const Cart = () => {
 
                       <div className="flex justify-between text-muted-foreground">
                     <span>
-                      {language === "ar" ? "سعر التوصيل" : "Delivery"}
+                      {t('cart.loyaltyPoints.deliveryPrice')}
                     </span>
                         <span>{deliveryPrice.toFixed(2)} ₪</span>
                       </div>
@@ -984,11 +922,7 @@ const Cart = () => {
                     </span>
                       </div>
                     </div>
-                    <Button
-                        className="w-full"
-                        size="lg"
-                        onClick={() => setCheckoutOpen(true)}
-                    >
+                    <Button className="w-full" size="lg" onClick={() => setCheckoutOpen(true)}>
                       {t("cart.checkout")}
                     </Button>
                   </div>
@@ -1006,11 +940,7 @@ const Cart = () => {
             <form onSubmit={handleCheckout} className="space-y-4">
               <div>
                 <Label htmlFor="name">{t("checkout.name")}</Label>
-                <Input
-                    id="name"
-                    required
-                    value={formData.name}
-                    onChange={(e) =>
+                <Input id="name" required value={formData.name} onChange={(e) =>
                         setFormData({ ...formData, name: e.target.value })
                     }
                 />
@@ -1018,7 +948,7 @@ const Cart = () => {
               <div>
                 <Label htmlFor="phone">{t("checkout.phone")}</Label>
                 <Input
-                    dir={language == 'ar' ? 'rtl' : 'ltr'}
+                    dir={language == 'en' ? 'ltr' : 'rtl'}
                     id="phone"
                     type="tel"
                     required
@@ -1043,15 +973,10 @@ const Cart = () => {
               {/* Region dropdown instead of address textarea */}
               <div>
                 <Label htmlFor="region">
-                  {language === "ar" ? "المنطقة" : "Region"}
+                  {t("cart.checkoutDialog.region")}
                 </Label>
 
-                <select
-                    id="region"
-                    required
-                    className="w-full border border-input rounded-md px-3 py-2 bg-background text-sm"
-                    value={selectedRegion}
-                    onChange={(e) => {
+                <select id="region" required className="w-full border border-input rounded-md px-3 py-2 bg-background text-sm" value={selectedRegion} onChange={(e) => {
                       const value = e.target.value;
                       setSelectedRegion(value);
 
@@ -1064,7 +989,7 @@ const Cart = () => {
                     }}
                 >
                   <option value="">
-                    {language === "ar" ? "اختر المنطقة" : "Select region"}
+                    {t("cart.checkoutDialog.selectRegion")}
                   </option>
 
                   {cities.map((c) => (
@@ -1079,18 +1004,12 @@ const Cart = () => {
               {/* Delivery type */}
               <div>
                 <Label htmlFor="deliveryType">
-                  {language === "ar" ? "نوع التوصيل" : "Delivery Type"}
+                  {t("cart.checkoutDialog.deliveryType")}
                 </Label>
 
-                <select
-                    id="deliveryType"
-                    required
-                    className="w-full border border-input rounded-md px-3 py-2 bg-background text-sm"
-                    value={selectedType}
-                    onChange={(e) => setSelectedType(e.target.value)}
-                >
+                <select id="deliveryType" required className="w-full border border-input rounded-md px-3 py-2 bg-background text-sm" value={selectedType} onChange={(e) => setSelectedType(e.target.value)}>
                   <option value="">
-                    {language === "ar" ? "اختر نوع التوصيل" : "Select delivery type"}
+                    {t("cart.checkoutDialog.selectDeliveryType")}
                   </option>
 
                   {deliveryTypes.map((type) => (
@@ -1104,10 +1023,7 @@ const Cart = () => {
 
               <div>
                 <Label htmlFor="notes">{t("checkout.notes")}</Label>
-                <Textarea
-                    id="notes"
-                    value={formData.notes}
-                    onChange={(e) =>
+                <Textarea id="notes" value={formData.notes} onChange={(e) =>
                         setFormData({ ...formData, notes: e.target.value })
                     }
                 />
@@ -1115,7 +1031,7 @@ const Cart = () => {
               {/* Payment method */}
               <div>
                 <Label>
-                  {language === "ar" ? "طريقة الدفع" : "Payment Method"}
+                  {t("cart.checkoutDialog.paymentMethod")}
                 </Label>
 
                 <div className="mt-2 flex flex-col gap-2">
@@ -1130,7 +1046,7 @@ const Cart = () => {
                         }
                     />
                     <span className="text-sm">
-                      {language === "ar" ? "الدفع نقداً عند الاستلام" : "Cash on delivery"}
+                      {t("cart.checkoutDialog.payCash")}
                     </span>
                   </label>
 
@@ -1145,7 +1061,7 @@ const Cart = () => {
                         }
                     />
                     <span className="text-sm">
-                      {language === "ar" ? "الدفع بواسطة فيزا" : "Pay with Visa"}
+                      {t("cart.checkoutDialog.payVisa")}
                     </span>
                   </label>
                 </div>
@@ -1153,9 +1069,7 @@ const Cart = () => {
                 {/* Optional info text */}
                 {formData.paymentMethod === "visa" && (
                     <p className="mt-2 text-xs text-muted-foreground">
-                      {language === "ar"
-                          ? "سيتم تحويلك إلى بوابة دفع آمنة لبنك فلسطين لإتمام العملية."
-                          : "You will be redirected to Bank of Palestine's secure payment page to complete your payment."}
+                      {t("cart.checkoutDialog.navigateToPaymentGateway")}
                     </p>
                 )}
               </div>
@@ -1187,28 +1101,24 @@ const Cart = () => {
                 </p>
               </div>
               <div className="flex items-start gap-2 mt-3">
-                <input
-                    type="checkbox"
-                    checked={acceptedPolicies}
-                    onChange={(e) => setAcceptedPolicies(e.target.checked)}
-                />
+                <input type="checkbox" checked={acceptedPolicies} onChange={(e) => setAcceptedPolicies(e.target.checked)}/>
                 <p className="text-xs text-muted-foreground">
-                  {language === "ar"
-                      ? <>أوافق على <Link to="/return-policy" className="text-primary">سياسة الإرجاع</Link> و <Link to="/privacy-policy" className="text-primary">سياسة الخصوصية</Link></>
-                      : <>I agree to the <Link to="/return-policy" className="text-primary">Return Policy</Link> and <Link to="/privacy-policy" className="text-primary">Privacy Policy</Link></>}
+                  {t("agreement.prefix")}{" "}
+
+                  <Link to="/return-policy" className="text-primary">
+                    {t("agreement.returnPolicy")}
+                  </Link>{" "}
+
+                  {t("agreement.and")}{" "}
+
+                  <Link to="/privacy-policy" className="text-primary">
+                    {t("agreement.privacyPolicy")}
+                  </Link>
                 </p>
               </div>
-              <ReCAPTCHA
-                  sitekey="6Lfi69osAAAAACRbBx1MQzaxz37xxc6U1U8bVZ_9"
-                  onChange={(value) => setCaptchaValue(value)}
-              />
+              <ReCAPTCHA sitekey="6Lfi69osAAAAACRbBx1MQzaxz37xxc6U1U8bVZ_9" onChange={(value) => setCaptchaValue(value)}/>
               <div className="flex gap-3 pt-4">
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setCheckoutOpen(false)}
-                    className="flex-1"
-                >
+                <Button type="button" variant="outline" onClick={() => setCheckoutOpen(false)} className="flex-1">
                   {t("checkout.cancel")}
                 </Button>
                 <Button type="submit" className="flex-1" disabled={loading}>
@@ -1222,20 +1132,20 @@ const Cart = () => {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {language === "ar" ? "تأكيد استخدام النقاط" : "Confirm points usage"}
+                {t("cart.points.confirmPointsUsage")}
               </AlertDialogTitle>
               <AlertDialogDescription>
-                {language === "ar"
-                    ? `هل أنت متأكد أنك تريد استخدام نقاطك لتطبيق خصم ${discount.percentage}%؟ سيتم خصم نفس عدد النقاط (${discount.percentage} نقطة) من رصيدك.`
-                    : `Are you sure you want to use your points to apply a ${discount.percentage}% discount? The same number of points (${discount.percentage}) will be deducted from your balance.`}
+                {t("cart.loyaltyPoints.confirmDiscount", {
+                  percentage: discount.percentage,
+                })}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>
-                {language === "ar" ? "إلغاء" : "Cancel"}
+                {t("common.cancel")}
               </AlertDialogCancel>
               <AlertDialogAction onClick={handleConfirmDiscountApply}>
-                {language === "ar" ? "تأكيد" : "Confirm"}
+                {t("common.confirm")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -1244,20 +1154,20 @@ const Cart = () => {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {language === "ar" ? "تأكيد استخدام النقاط" : "Confirm points usage"}
+                {t("cart.points.confirmPointsUsage")}
               </AlertDialogTitle>
               <AlertDialogDescription>
-                {language === "ar"
-                    ? `هل أنت متأكد أنك تريد استخدام ${FREE_PRODUCT_POINTS_COST} نقطة للحصول على المنتج مجاناً؟`
-                    : `Are you sure you want to use ${FREE_PRODUCT_POINTS_COST} points to get this product for free?`}
+                {t("cart.loyaltyPoints.confirmFreeProduct", {
+                  points: FREE_PRODUCT_POINTS_COST,
+                })}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>
-                {language === "ar" ? "إلغاء" : "Cancel"}
+                {t("common.cancel")}
               </AlertDialogCancel>
               <AlertDialogAction onClick={handleConfirmFreeProduct}>
-                {language === "ar" ? "تأكيد" : "Confirm"}
+                {t("common.confirm")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

@@ -10,12 +10,6 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import {Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious,} from "@/components/ui/carousel";
 import { Gift } from "lucide-react";
 import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,} from "@/components/ui/dialog";
-import logo from "../assets/logo.png";
-import logoText from "../assets/LogoText.png";
-import logoTextWhite from "../assets/logoTextWhite.png";
-import {useTheme} from "next-themes";
-import { LanguageToggle } from "@/components/LanguageToggle";
-import { ThemeToggle } from "@/components/ThemeToggle";
 
 // 🔹 API base
 const API_BASE = import.meta.env.VITE_ENV || "https://kewi.ps";
@@ -49,23 +43,8 @@ type BackendProduct = {
   brand?: string | { name: string };
 };
 
-// 👇 This matches what ProductCard expects (like mockProducts)
-type UiProduct = {
-  id: string;
-  name: { en: string; ar: string };
-  images: string[];
-  sku: string;
-  barcode: string;
-  warehouseQty: number;
-  kewiQty: number;
-  costPrice: number;
-  retailPrice: number;
-  wholesalePrice: number;
-};
-const IS_SITE_LIVE =
-    import.meta.env.VITE_SITE_LIVE === "true" || false;
-const placeholderImage =
-    "https://via.placeholder.com/400x400.png?text=No+Image";
+
+const placeholderImage = "https://via.placeholder.com/400x400.png?text=No+Image";
 
 const Home = () => {
   const { toast } = useToast();
@@ -327,14 +306,11 @@ const Home = () => {
               </p>
               <div className="flex gap-4 justify-center">
                 <Link to="/products">
-                  <Button
-                      size="lg"
-                      className="btn-scale bg-primary hover:bg-primary/90 group"
-                  >
+                  <Button size="lg" className="btn-scale bg-primary hover:bg-primary/90 group">
                     {t("home.shopNow")}
                     <ArrowRight
                         className={`h-4 w-4 group-hover:translate-x-1 transition-transform ${
-                            language === "ar" ? "mr-2 rotate-180" : "ml-2"
+                            language !== "en" ? "mr-2 rotate-180" : "ml-2"
                         }`}
                     />
                   </Button>
@@ -358,7 +334,7 @@ const Home = () => {
 
             {categories.length === 0 && !loading ? (
                 <p className="text-center text-muted-foreground">
-                  لا توجد تصنيفات متاحة حالياً
+                  {t("home.noCat")}
                 </p>
             ) : (
                 <Carousel className="w-full max-w-6xl mx-auto" dir={'ltr'} opts={{ align: "start", loop: true }}>
@@ -367,9 +343,7 @@ const Home = () => {
                         <CarouselItem key={category._id} className="md:basis-1/2 lg:basis-1/3">
                           <Link to={`/category/${category._id}`}>
                             <div className="relative group overflow-hidden rounded-2xl h-80 cursor-pointer">
-                              <img
-                                  src={category.image || placeholderImage}
-                                  alt={category.name}
+                              <img src={category.image || placeholderImage} alt={category.name}
                                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                               />
                               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex items-end p-6">
@@ -382,12 +356,8 @@ const Home = () => {
                         </CarouselItem>
                     ))}
                   </CarouselContent>
-                  <CarouselPrevious
-                      className= "left-12"
-                  />
-                  <CarouselNext
-                      className= "right-12"
-                  />
+                  <CarouselPrevious className= "left-12"/>
+                  <CarouselNext className= "right-12"/>
                 </Carousel>
             )}
           </div>
@@ -405,16 +375,12 @@ const Home = () => {
 
             {featuredProducts.length === 0 && !loading ? (
                 <p className="text-center text-muted-foreground">
-                  لا توجد منتجات مميزة حالياً
+                  {t("home.noFeatured")}
                 </p>
             ) : (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                   {featuredProducts.map((product) => (
-                      <ProductCard
-                          key={product._id || product.id}
-                          product={product}
-                          onAddToCart={handleAddToCart}
-                      />
+                      <ProductCard key={product._id || product.id} product={product} onAddToCart={handleAddToCart}/>
                   ))}
                 </div>
             )}
@@ -423,9 +389,7 @@ const Home = () => {
               <Link to="/products">
                 <Button size="lg" variant="outline" className="btn-scale">
                   {t("home.viewAll")}
-                  <ArrowRight
-                      className={language === "ar" ? "mr-2 rotate-180" : "ml-2"}
-                  />
+                  <ArrowRight className={language === "en" ? "ml-2" : "mr-2 rotate-180" }/>
                 </Button>
               </Link>
             </div>
@@ -437,20 +401,16 @@ const Home = () => {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle dir={language === "ar" ? 'rtl' :'ltr'} className="flex items-center gap-2">
-                <Gift className="h-5 w-5 text-primary" />
-                {language === "ar" ? "كل عام وأنت بخير! 🎉" : "Happy Birthday! 🎉"}
+                <Gift className="h-5 w-5 text-primary" />{t("home.noFeatured")}
+                {t("home.birthDay")}
               </DialogTitle>
-              <DialogDescription style={{ textAlign: language === "ar" ? "start" : "end" }}>
-                {language === "ar"
-                    ? "لدينا هدية خاصة لك اليوم 🎁 تصفّح المنتجات وشاهد سعر عيد الميلاد."
-                    : "We’ve got a special gift for you today 🎁 Browse products to see your birthday price."}
+              <DialogDescription style={{ textAlign: language !== "ar" ? "end" : "start" }}>
+                {t("home.birthDay.desc")}
               </DialogDescription>
             </DialogHeader>
 
             <div className="mt-2 text-sm text-muted-foreground">
-              {language === "ar"
-                  ? "ملاحظة: تظهر هذه الرسالة مرة واحدة فقط اليوم."
-                  : "Note: This message shows only once today."}
+              {t("home.birthDay.note")}
             </div>
           </DialogContent>
         </Dialog>

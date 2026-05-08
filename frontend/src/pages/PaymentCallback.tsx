@@ -35,7 +35,7 @@ const PaymentCallback = ({updateCart, setCheckoutOpen, setFreeProductId, setAppl
                         }),
                     }
                 );
-                console.log("res is: " , res);
+
                 const data = await res.json();
 
                 if (!res.ok) {
@@ -44,11 +44,8 @@ const PaymentCallback = ({updateCart, setCheckoutOpen, setFreeProductId, setAppl
 
                 // ✅ SUCCESS FLOW
                 toast({
-                    title: language === "ar" ? "تمت عملية الدفع بنجاح." : "Payment successful",
-                    description:
-                        language === "ar"
-                            ? "تم تقديم طلبك بنجاح."
-                            : "Your order has been placed successfully.",
+                    title: t('toast.suc.paymentSuccess'),
+                    description: t('toast.suc.paymentSuccess')
                 });
                 // mark success
                 localStorage.setItem("paymentSuccess", "true");
@@ -60,11 +57,8 @@ const PaymentCallback = ({updateCart, setCheckoutOpen, setFreeProductId, setAppl
                 console.error(err);
 
                 toast({
-                    title: language === "ar" ? "فشل الدفع" : "Payment failed",
-                    description:
-                        language === "ar"
-                            ? "لم تكتمل عملية الدفع."
-                            : "Payment was not completed.",
+                    title: t('toast.err.paymentErr'),
+                    description: t('toast.err.paymentErr.desc'),
                     variant: "destructive",
                 });
 
@@ -75,7 +69,7 @@ const PaymentCallback = ({updateCart, setCheckoutOpen, setFreeProductId, setAppl
         verifyPayment();
     }, [navigate]);
 
-    return <div>Verifying payment...</div>;
+    return <div>{t('payment.verifying')}</div>;
 };
 
 export default PaymentCallback;

@@ -47,13 +47,12 @@ interface Purchase {
 }
 
 const mapOrderStatusToUI = (status?: ApiPurchase["orderStatus"]): UIStatus => {
-  // fallback for old / missing data
   if (!status) return "ordered";
   return status;
 };
 
 const PurchaseHistory = () => {
-  const { language } = useLanguage();
+  const { t, language } = useLanguage();
   const { addPoints } = useLoyalty();
   const { toast } = useToast();
   const role = typeof window !== "undefined" ? localStorage.getItem("userRole") : null;
@@ -73,7 +72,7 @@ const PurchaseHistory = () => {
         case "delivered":
           return "تم التسليم";
       }
-    } else {
+    } else if (lang === 'en') {
       switch (status) {
         case "ordered":
           return "Order created";
@@ -84,25 +83,29 @@ const PurchaseHistory = () => {
         case "delivered":
           return "Order delivered";
       }
+    } else {
+      switch (status) {
+        case "ordered":
+          return "הזמנה נוצרה";
+        case "confirmed":
+          return "ההזמנה אושרה";
+        case "shipped":
+          return "ההזמנה נשלחה";
+        case "delivered":
+          return "ההזמנה נמסרה";
+      }
     }
   };
-  // 🔹 Fetch user purchases from backend
+
   useEffect(() => {
     const fetchPurchases = async () => {
       setLoading(true);
       setError(null);
       try {
-        const token =
-            typeof window !== "undefined"
-                ? localStorage.getItem("token")
-                : null;
+        const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
         if (!token) {
-          setError(
-              language === "ar"
-                  ? "الرجاء تسجيل الدخول لرؤية طلباتك"
-                  : "Please log in to view your orders"
-          );
+          setError(t('purchaseHistory.loginFirst'));
           setLoading(false);
           return;
         }
@@ -117,10 +120,7 @@ const PurchaseHistory = () => {
         if (!res.ok) {
           const errData = await res.json().catch(() => null);
           throw new Error(
-              errData?.message ||
-              (language === "ar"
-                  ? "فشل في جلب الطلبات"
-                  : "Failed to fetch orders")
+              errData?.message || t('purchaseHistory.failedToFetchOrders')
           );
         }
 
@@ -145,12 +145,7 @@ const PurchaseHistory = () => {
         setPurchases(mapped);
       } catch (err: any) {
         console.error("Error fetching purchases:", err);
-        setError(
-            err?.message ||
-            (language === "ar"
-                ? "حدث خطأ أثناء جلب الطلبات"
-                : "An error occurred while fetching orders.")
-        );
+        setError(err?.message || t('purchaseHistory.failedToFetchOrders'));
       } finally {
         setLoading(false);
       }
@@ -159,26 +154,18 @@ const PurchaseHistory = () => {
     fetchPurchases();
   }, [language]);
 
-  // ✅ User confirms order received
-// inside PurchaseHistory component
-
-// ...
 
   const handleConfirmReceived = async (orderId: string) => {
     const target = purchases.find((p) => p.id === orderId);
     if (!target || target.isConfirmed) return;
 
     try {
-      const token =
-          typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
       if (!token) {
         toast({
-          title: language === "ar" ? "غير مسجل" : "Not logged in",
-          description:
-              language === "ar"
-                  ? "الرجاء تسجيل الدخول لتأكيد الطلب"
-                  : "Please log in to confirm the order.",
+          title: t('toast.err.notLoggedIn'),
+          description: t('toast.err.notLoggedIn.desc.confirmOrder'),
           variant: "destructive",
         });
         return;
@@ -219,25 +206,22 @@ const PurchaseHistory = () => {
       );
 
       toast({
-        title: language === "ar" ? "تم تأكيد الاستلام!" : "Order confirmed!",
+        title: t("toast.suc.orderConfirmed"),
         description:
             pointsEarned > 0
-                ? role === 'user' ? language === "ar"
-                    ? `حصلت على ${pointsEarned} نقطة ولاء`
-                    : `You earned ${pointsEarned} loyalty points!` : ''
-                : language === "ar"
-                    ? "تم تأكيد الطلب"
-                    : "Order has been confirmed",
+                ? role === "user"
+                    ? t("order.loyaltyPointsEarned", {
+                      points: pointsEarned,
+                    })
+                    : ""
+                : t("order.confirmed"),
       });
     } catch (err: any) {
       console.error(err);
       toast({
-        title: language === "ar" ? "خطأ" : "Error",
+        title: t("toast.err"),
         description:
-            err?.message ||
-            (language === "ar"
-                ? "فشل في تأكيد استلام الطلب"
-                : "Failed to confirm order delivery."),
+            err?.message || t("toast.err.failedConfirmOrder"),
         variant: "destructive",
       });
     }
@@ -250,18 +234,16 @@ const PurchaseHistory = () => {
         <div className="container mx-auto px-4 py-12">
           <div className="mb-8">
             <h1 className="text-4xl font-bold mb-2">
-              {language === "ar" ? "سجل المشتريات" : "Purchase History"}
+              {t('purchaseHistory.header')}
             </h1>
             <p className="text-muted-foreground">
-              {language === "ar"
-                  ? "تتبع طلباتك واكسب نقاط الولاء"
-                  : "Track your orders and earn loyalty points"}
+              {t('purchaseHistory.desc')}
             </p>
           </div>
 
           {loading && (
               <div className="text-center text-muted-foreground py-8">
-                {language === "ar" ? "جاري تحميل الطلبات..." : "Loading orders..."}
+                {t('purchaseHistory.loading')}
               </div>
           )}
 
@@ -271,7 +253,6 @@ const PurchaseHistory = () => {
 
           {!loading && !error && (
               <div className={`${role === 'user' ? 'grid lg:grid-cols-3 gap-8' : '' } `}>
-                {/* Loyalty Card Sidebar */}
                 {
                   role === 'user' && (
                         <div className="lg:col-span-1">
@@ -283,10 +264,8 @@ const PurchaseHistory = () => {
                 {/* Orders List */}
                 <div className="lg:col-span-2 space-y-6">
                   {purchases.length === 0 && (
-                      <Card className="p-6 text-center text-muted-foreground">
-                        {language === "ar"
-                            ? "لا توجد طلبات حتى الآن."
-                            : "You have no orders yet."}
+                      <Card className="p-6 noOrdersYet text-muted-foreground">
+                        {t('purchaseHistory.noOrdersYet')}
                       </Card>
                   )}
 
@@ -314,11 +293,7 @@ const PurchaseHistory = () => {
                                   +{purchase.pointsEarned} pts
                                 </Badge>
                             )}
-                            <Badge
-                                variant={
-                                  purchase.status === "delivered" ? "default" : "secondary"
-                                }
-                            >
+                            <Badge variant={purchase.status === "delivered" ? "default" : "secondary"}>
                               {statusLabel(purchase.status, language)}
                             </Badge>
                           </div>
@@ -341,13 +316,9 @@ const PurchaseHistory = () => {
                             <div className="mb-4 flex items-center gap-2 text-sm bg-primary/10 rounded-lg p-3">
                               <Gift className="h-4 w-4 text-primary" />
                               <span>
-                                {language === "ar"
-                                    ? `ستحصل على ${calculatePotentialPoints(
-                                        purchase.total
-                                    )} نقطة عند تأكيد الاستلام`
-                                    : `You'll earn ${calculatePotentialPoints(
-                                        purchase.total
-                                    )} points when you confirm delivery`}
+                                {t("purchaseHistory.earnPointsOnDelivery", {
+                                  points: calculatePotentialPoints(purchase.total),
+                                })}
                               </span>
                             </div>
                         )}
@@ -357,16 +328,16 @@ const PurchaseHistory = () => {
                           <TableHeader>
                             <TableRow>
                               <TableHead>
-                                {language === "ar" ? "المنتج" : "Item"}
+                                {t('purchaseHistory.item')}
                               </TableHead>
                               <TableHead>
-                                {language === "ar" ? "الكمية" : "Quantity"}
+                                {t('purchaseHistory.quantity')}
                               </TableHead>
                               <TableHead>
-                                {language === "ar" ? "السعر" : "Price"}
+                                {t('purchaseHistory.price')}
                               </TableHead>
                               <TableHead>
-                                {language === "ar" ? "المجموع" : "Subtotal"}
+                                {t('purchaseHistory.subtotal')}
                               </TableHead>
                             </TableRow>
                           </TableHeader>
@@ -398,12 +369,12 @@ const PurchaseHistory = () => {
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <CreditCard className="h-4 w-4" />
                             <span className="text-sm">
-                              {language === "ar" ? "مدفوع" : "Paid"}
+                              {t('purchaseHistory.paid')}
                             </span>
                           </div>
                           <div className="text-right">
                             <p className="text-sm text-muted-foreground">
-                              {language === "ar" ? "الإجمالي بدون توصيل" : "Total Without Delivery"}
+                              {t('purchaseHistory.total')}
                             </p>
                             <p className="text-2xl font-bold text-primary">
                               {purchase.total.toFixed(2)} ₪

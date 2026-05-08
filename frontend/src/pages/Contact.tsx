@@ -9,7 +9,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 const Contact = () => {
-  const { language } = useLanguage();
+  const { t,language } = useLanguage();
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: "",
@@ -50,12 +50,10 @@ const Contact = () => {
         <div className="container mx-auto px-4 py-24 relative">
           <div className="max-w-3xl mx-auto text-center space-y-6 animate-fade-in">
             <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-              {language === 'ar' ? 'تواصل معنا' : 'Contact Us'}
+              {t('contact.header')}
             </h1>
             <p className="text-xl text-muted-foreground">
-              {language === 'ar' 
-                ? 'نحن هنا للمساعدة والإجابة على أي سؤال قد يكون لديك' 
-                : 'We\'re here to help and answer any questions you might have'}
+              {t('contact.desc')}
             </p>
           </div>
         </div>
@@ -69,12 +67,10 @@ const Contact = () => {
             <div className="space-y-8">
               <div>
                 <h2 className="text-3xl font-bold mb-6">
-                  {language === 'ar' ? 'معلومات التواصل' : 'Get in Touch'}
+                  {t('contact.contactInfo')}
                 </h2>
                 <p className="text-muted-foreground text-lg">
-                  {language === 'ar'
-                    ? 'يمكنك التواصل معنا من خلال أي من الطرق التالية'
-                    : 'Feel free to reach out to us through any of the following methods'}
+                  {t('contact.contactInfo.desc')}
                 </p>
               </div>
 
@@ -84,7 +80,7 @@ const Contact = () => {
                     <Mail className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold mb-1">{language === 'ar' ? 'البريد الإلكتروني' : 'Email'}</h3>
+                    <h3 className="font-semibold mb-1">{t('contact.contactInfo.email')}</h3>
                     <p className="text-muted-foreground" dir="ltr">contact@example.com</p>
                   </div>
                 </div>
@@ -94,7 +90,7 @@ const Contact = () => {
                     <Phone className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold mb-1">{language === 'ar' ? 'الهاتف' : 'Phone'}</h3>
+                    <h3 className="font-semibold mb-1">{t('contact.contactInfo.phone')}</h3>
                     <p className="text-muted-foreground" dir="ltr">+1 (555) 123-4567</p>
                   </div>
                 </div>
@@ -104,7 +100,7 @@ const Contact = () => {
                     <MapPin className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold mb-1">{language === 'ar' ? 'العنوان' : 'Address'}</h3>
+                    <h3 className="font-semibold mb-1">{t('contact.contactInfo.address')}</h3>
                     <p className="text-muted-foreground">
                       {language === 'ar' ? 'شارع 123، المدينة، الدولة' : '123 Street, City, Country'}
                     </p>

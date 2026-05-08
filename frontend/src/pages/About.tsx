@@ -15,10 +15,10 @@ const About = () => {
     wholesalers: 0,
   });
   const stats = [
-    { icon: Package, label: { en: "Products", ar: "منتجات" }, value: `${statss.totalProducts}+`},
-    { icon: Users, label: { en: "Happy Customers", ar: "عملاء سعداء" }, value: "10K+" },
-    { icon: Award, label: { en: "Years Experience", ar: "سنوات خبرة" }, value: "12+" },
-    { icon: Target, label: { en: "City", ar: "مدينة وقرية" }, value: "40+" },
+    { icon: Package, label: { en: "Products", ar: "منتجات", he: 'מוצרים' }, value: `${statss.totalProducts}+`},
+    { icon: Users, label: { en: "Happy Customers", ar: "عملاء سعداء", he: 'לקוחות מרוצים' }, value: "10K+" },
+    { icon: Award, label: { en: "Years Experience", ar: "سنوات خبرة" , he: 'שנות ניסיון'}, value: "12+" },
+    { icon: Target, label: { en: "City", ar: "مدينة وقرية" , he: 'עִיר'}, value: "40+" },
   ];
 
   useEffect(() => {
@@ -51,12 +51,10 @@ const About = () => {
         <div className="container mx-auto px-4 py-24 relative">
           <div className="max-w-3xl mx-auto text-center space-y-6 animate-fade-in">
             <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-              {(language === 'ar' ? 'من نحن' : 'About Us')}
+              {t('about.title')}
             </h1>
             <p className="text-xl text-muted-foreground">
-              {language === 'ar' 
-                ? 'نحن نقدم أفضل المنتجات عالية الجودة لعملائنا حول العالم' 
-                : 'We provide the finest quality products to our customers worldwide'}
+              {t('about.desc')}
             </p>
           </div>
         </div>
@@ -85,20 +83,16 @@ const About = () => {
           <div className="max-w-4xl mx-auto space-y-8">
             <div className="text-center mb-12">
               <h2 className="text-4xl font-bold mb-4">
-                {language === 'ar' ? 'قصتنا' : 'Our Story'}
+                {t('about.ourStory')}
               </h2>
             </div>
             
             <div className="prose prose-lg max-w-none dark:prose-invert">
               <p className="text-muted-foreground text-lg leading-relaxed">
-                {language === 'ar' 
-                  ? 'بدأنا رحلتنا منذ أكثر من 15 عامًا بهدف توفير منتجات عالية الجودة لعملائنا. نحن نؤمن بأن كل منتج يحكي قصة، ونحن هنا لمساعدتك في العثور على القصة المثالية لك.' 
-                  : 'We started our journey over 15 years ago with a mission to provide high-quality products to our customers. We believe every product tells a story, and we\'re here to help you find your perfect one.'}
+                {t('about.ourStory.1')}
               </p>
               <p className="text-muted-foreground text-lg leading-relaxed">
-                {language === 'ar'
-                  ? 'فريقنا ملتزم بتقديم أفضل تجربة تسوق ممكنة، من اختيار المنتجات إلى خدمة ما بعد البيع. نحن نفخر بعلاقاتنا طويلة الأمد مع عملائنا وشركائنا.'
-                  : 'Our team is committed to delivering the best shopping experience possible, from product selection to after-sales service. We pride ourselves on our long-lasting relationships with our customers and partners.'}
+                {t('about.ourStory.2')}
               </p>
             </div>
           </div>

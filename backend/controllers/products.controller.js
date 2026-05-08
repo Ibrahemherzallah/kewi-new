@@ -45,6 +45,20 @@ export const getProductsById = async (req, res) => {
     }
 };
 
+
+export const getDiscountProducts = async (req, res) => {
+    try {
+        const products = await Product.find({ isOnSale: true })
+            .populate("categoryId")
+            .populate("brandId")
+            .sort({ createdAt: -1 });
+        console.log("products" , products)
+        res.json(products);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
 export const getProductsByCategory = async (req, res) => {
     const { categoryId } = req.params;
     if(categoryId === '6804dfd569ff9ce587677f0c') {

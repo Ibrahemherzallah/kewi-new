@@ -9,7 +9,7 @@ import { Package } from "lucide-react";
 const SignUp = () => {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { language } = useLanguage();
+    const { t,language } = useLanguage();
 
     const [formData, setFormData] = useState({
         username: "",
@@ -31,7 +31,7 @@ const SignUp = () => {
                     phone: formData.phone,
                     password: formData.password,
                     address: formData.address,
-                    dob: formData.dob, // ✅ send dob as YYYY-MM-DD string
+                    dob: formData.dob,
                 }),
             });
 
@@ -47,11 +47,8 @@ const SignUp = () => {
             localStorage.setItem("user", JSON.stringify(data.user));
 
             toast({
-                title: language === "ar" ? "مرحباً بك" : "Welcome",
-                description:
-                    language === "ar"
-                        ? "تم إنشاء الحساب بنجاح"
-                        : "Account created successfully",
+                title: t('toast.welcome'),
+                description: t('toast.welcome.signup'),
             });
 
             if (data.user.role === "admin") {
@@ -61,12 +58,8 @@ const SignUp = () => {
             }
         } catch (err: any) {
             toast({
-                title: language === "ar" ? "خطأ" : "Error",
-                description:
-                    err.message ||
-                    (language === "ar"
-                        ? "فشل إنشاء الحساب"
-                        : "Failed to create account"),
+                title: t('toast.err'),
+                description: err.message || t('toast.createAccount.err'),
                 variant: "destructive",
             });
         }
@@ -77,12 +70,10 @@ const SignUp = () => {
             <div className="w-full max-w-md">
                 <div className="text-center mb-8">
                     <h1 className="text-3xl font-bold mt-4">
-                        {language === "ar" ? "إنشاء حساب" : "Sign Up"}
+                        {t('signup.header')}
                     </h1>
                     <p className="text-muted-foreground mt-2">
-                        {language === "ar"
-                            ? "إنشاء حساب جديد"
-                            : "Create a new account"}
+                        {t('signup.desc')}
                     </p>
                 </div>
 
@@ -91,7 +82,7 @@ const SignUp = () => {
                         {/* Username */}
                         <div>
                             <label className="text-sm font-medium mb-2 block">
-                                {language === "ar" ? "اسم المستخدم" : "Username"}
+                                {t('signup.field.username')}
                             </label>
                             <Input
                                 type="text"
@@ -99,11 +90,7 @@ const SignUp = () => {
                                 onChange={(e) =>
                                     setFormData({ ...formData, username: e.target.value })
                                 }
-                                placeholder={
-                                    language === "ar"
-                                        ? "أدخل اسم المستخدم"
-                                        : "Enter your username"
-                                }
+                                placeholder={t('signup.field.username.placeholder')}
                                 required
                             />
                         </div>
@@ -111,7 +98,7 @@ const SignUp = () => {
                         {/* Phone */}
                         <div>
                             <label className="text-sm font-medium mb-2 block">
-                                {language === "ar" ? "رقم الهاتف" : "Phone"}
+                                {t('signup.field.phone')}
                             </label>
                             <Input
                                 type="tel"
@@ -120,11 +107,7 @@ const SignUp = () => {
                                 onChange={(e) =>
                                     setFormData({ ...formData, phone: e.target.value })
                                 }
-                                placeholder={
-                                    language === "ar"
-                                        ? "أدخل رقم هاتفك"
-                                        : "Enter your phone number"
-                                }
+                                placeholder={t('signup.field.phone.placeholder')}
                                 required
                             />
                         </div>
@@ -132,7 +115,7 @@ const SignUp = () => {
                         {/* DOB */}
                         <div>
                             <label className="text-sm font-medium mb-2 block">
-                                {language === "ar" ? "تاريخ الميلاد" : "Date of Birth"}
+                                {t('signup.field.dob')}
                             </label>
                             <Input
                                 type="date"
@@ -147,25 +130,21 @@ const SignUp = () => {
                         {/* Address */}
                         <div>
                             <label className="text-sm font-medium mb-2 block">
-                                {language === "ar" ? "العنوان" : "Address"}
+                                {t('signup.field.address')}
                             </label>
                             <Input
                                 value={formData.address}
                                 onChange={(e) =>
                                     setFormData({ ...formData, address: e.target.value })
                                 }
-                                placeholder={
-                                    language === "ar"
-                                        ? "أدخل عنوانك"
-                                        : "Enter your address"
-                                }
+                                placeholder={t('signup.field.address.placeholder')}
                             />
                         </div>
 
                         {/* Password */}
                         <div>
                             <label className="text-sm font-medium mb-2 block">
-                                {language === "ar" ? "كلمة المرور" : "Password"}
+                                {t('signup.field.password')}
                             </label>
                             <Input
                                 type="password"
@@ -173,28 +152,20 @@ const SignUp = () => {
                                 onChange={(e) =>
                                     setFormData({ ...formData, password: e.target.value })
                                 }
-                                placeholder={
-                                    language === "ar"
-                                        ? "أدخل كلمة المرور"
-                                        : "Enter your password"
-                                }
+                                placeholder={t('signup.field.password.placeholder')}
                                 required
                             />
                         </div>
 
-                        <Button
-                            type="submit"
-                            size="lg"
-                            className="w-full bg-primary hover:bg-primary/90"
-                        >
-                            {language === "ar" ? "إنشاء حساب" : "Sign Up"}
+                        <Button type="submit" size="lg" className="w-full bg-primary hover:bg-primary/90">
+                            {t('signup.btnSignup')}
                         </Button>
                     </form>
 
                     <div className="mt-6 text-center text-sm">
-                        {language === "ar" ? "لديك حساب بالفعل؟" : "Already have an account?"}{" "}
+                        {t('signup.haveAccount')}{" "}
                         <Link to="/login" className="text-primary hover:underline">
-                            {language === "ar" ? "تسجيل الدخول" : "Login"}
+                            {t('signup.login')}
                         </Link>
                     </div>
                 </div>
