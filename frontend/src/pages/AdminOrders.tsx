@@ -81,18 +81,21 @@ const AdminOrders = () => {
 
         switch (order?.city) {
           case 'West Bank':
+          case 'הגדה המערבית':
           case 'الضفة الغربية':
             deliveryPrice =
                 order?.deliveryType === 'مستعجل' ? 20 : 10;
             break;
 
           case '48 Territories':
+          case '48 טריטוריות':
           case 'الداخل':
             deliveryPrice =
                 order?.deliveryType === 'مستعجل' ? 70 : 50;
             break;
 
           case 'Jerusalem':
+          case 'יְרוּשָׁלַיִם':
           case 'القدس':
             deliveryPrice =
                 order?.deliveryType === 'مستعجل' ? 30 : 20;

@@ -68,13 +68,13 @@ const verifyCaptcha = async (token) => {
 
 export const addPurchase = async (req, res) => {
     const {cName, cNumber, cAddress, cCity, delivery, notes, id, products, totalPrice,discount,numOfItems,} = req.body;
-    const isHuman = await verifyCaptcha(req.body.captchaToken);
-
-    if (!isHuman) {
-        return res.status(400).json({
-            message: "Captcha verification failed",
-        });
-    }
+    // const isHuman = await verifyCaptcha(req.body.captchaToken);
+    //
+    // if (!isHuman) {
+    //     return res.status(400).json({
+    //         message: "Captcha verification failed",
+    //     });
+    // }
 
     try {
         const newPurchase = new Purchase({
