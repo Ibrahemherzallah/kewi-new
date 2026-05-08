@@ -93,7 +93,6 @@ const Cart = () => {
   const isLoggedIn = !!token;
   const isWholesalerUser = role === "wholesaler";
   const [captchaValue, setCaptchaValue] = useState<string | null>(null);
-  const recaptchaRef = useRef<ReCAPTCHA>(null);
   // ---------- HELPERS ----------
 
   const getItemId = (item: CartItem): string => item.id || item._id || "";
@@ -453,19 +452,7 @@ const Cart = () => {
       });
 
       const numOfItems = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
-      const tokenRecaptcha = await recaptchaRef.current?.executeAsync();
 
-      if (!tokenRecaptcha) {
-        toast({
-          title: t("toast.captchaValue.title"),
-          description: t("toast.captchaValue.desc"),
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setCaptchaValue(tokenRecaptcha);
-      recaptchaRef.current?.reset();
       const totalWithoutDelivery = Number(total.toFixed(2));
       const totalWithDelivery = Number(grandTotal.toFixed(2));
 
@@ -1129,13 +1116,7 @@ const Cart = () => {
                 </p>
               </div>
               <div className="relative z-[10000]">
-                <ReCAPTCHA
-                    ref={recaptchaRef}
-                    sitekey="6Lfi69osAAAAACRbBx1MQzaxz37xxc6U1U8bVZ_9"
-                    size="invisible"
-                    onChange={(value) => setCaptchaValue(value)}
-                />
-                {/*<ReCAPTCHA sitekey="6Lfi69osAAAAACRbBx1MQzaxz37xxc6U1U8bVZ_9" onChange={(value) => setCaptchaValue(value)}/>*/}
+                <ReCAPTCHA sitekey="6Lfi69osAAAAACRbBx1MQzaxz37xxc6U1U8bVZ_9" onChange={(value) => setCaptchaValue(value)}/>
               </div>
               <div className="flex gap-3 pt-4">
                 <Button type="button" variant="outline" onClick={() => setCheckoutOpen(false)} className="flex-1">
