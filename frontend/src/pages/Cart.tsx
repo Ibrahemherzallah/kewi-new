@@ -933,7 +933,7 @@ const Cart = () => {
 
         {/* Checkout dialog */}
         <Dialog open={checkoutOpen} onOpenChange={setCheckoutOpen}>
-          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto z-[9999]">
             <DialogHeader>
               <DialogTitle className={'text-start'}>{t("checkout.title")}</DialogTitle>
             </DialogHeader>
@@ -1078,25 +1078,24 @@ const Cart = () => {
               <div className="bg-primary/10 rounded-lg p-3 space-y-1">
                 <p className="text-sm font-medium flex items-center gap-2">
                   <Gift className="h-4 w-4 text-primary" />
+
                   {discountAmount > 0
                       ? freeProductId
-                          ? language === "ar"
-                              ? "يتضمن منتج مجاني!"
-                              : "Includes a free product!"
-                          : language === "ar"
-                              ? `خصم ${appliedDiscountPercentage}% مطبق`
-                              : `${appliedDiscountPercentage}% discount applied`
-                      : language === "ar"
-                          ? "الإجمالي يشمل التوصيل"
-                          : "Total includes delivery"}
+                          ? t("checkout.summary.includesFreeProduct")
+                          : t("checkout.summary.discountApplied", {
+                            percentage: appliedDiscountPercentage,
+                          })
+                      : t("checkout.summary.totalIncludesDelivery")}
                 </p>
+
                 <p className="text-xs text-muted-foreground">
-                  {language === "ar"
-                      ? `سعر التوصيل: ${deliveryPrice.toFixed(2)} ₪`
-                      : `Delivery: ${deliveryPrice.toFixed(2)} ₪`}
+                  {t("checkout.summary.deliveryPrice", {
+                    price: deliveryPrice.toFixed(2),
+                  })}
                 </p>
+
                 <p className="text-lg font-bold text-primary">
-                  {language === "ar" ? "الإجمالي:" : "Total:"}{" "}
+                  {t("checkout.summary.total")}{" "}
                   {grandTotal.toFixed(2)} ₪
                 </p>
               </div>
@@ -1116,7 +1115,9 @@ const Cart = () => {
                   </Link>
                 </p>
               </div>
-              <ReCAPTCHA sitekey="6Lfi69osAAAAACRbBx1MQzaxz37xxc6U1U8bVZ_9" onChange={(value) => setCaptchaValue(value)}/>
+              <div className="relative z-[10000]">
+                <ReCAPTCHA sitekey="6Lfi69osAAAAACRbBx1MQzaxz37xxc6U1U8bVZ_9" onChange={(value) => setCaptchaValue(value)}/>
+              </div>
               <div className="flex gap-3 pt-4">
                 <Button type="button" variant="outline" onClick={() => setCheckoutOpen(false)} className="flex-1">
                   {t("checkout.cancel")}

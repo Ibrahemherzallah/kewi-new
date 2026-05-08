@@ -318,7 +318,35 @@ const translations: Record<string, Record<Language, string>> = {
   'checkout.notes': { en: 'Order Notes', ar: 'ملاحظات الطلب', he: 'הערות להזמנה' },
   'checkout.submit': { en: 'Place Order', ar: 'إرسال الطلب', he: 'בצע הזמנה' },
   'checkout.cancel': { en: 'Cancel', ar: 'إلغاء', he: 'ביטול' },
+  'checkout.summary.includesFreeProduct': {
+    en: 'Includes a free product!',
+    ar: 'يتضمن منتج مجاني!',
+    he: 'כולל מוצר חינם!'
+  },
 
+  'checkout.summary.discountApplied': {
+    en: '{{percentage}}% discount applied',
+    ar: 'تم تطبيق خصم {{percentage}}%',
+    he: 'הוחלה הנחה של {{percentage}}%'
+  },
+
+  'checkout.summary.totalIncludesDelivery': {
+    en: 'Total includes delivery',
+    ar: 'الإجمالي يشمل التوصيل',
+    he: 'הסכום כולל משלוח'
+  },
+
+  'checkout.summary.deliveryPrice': {
+    en: 'Delivery: {{price}} ₪',
+    ar: 'سعر التوصيل: {{price}} ₪',
+    he: 'משלוח: {{price}} ₪'
+  },
+
+  'checkout.summary.total': {
+    en: 'Total:',
+    ar: 'الإجمالي:',
+    he: 'סה״כ:'
+  },
 // Privacy Policy
   'privacy.header': { en: 'Privacy Policy', ar: 'سياسة الخصوصية', he: 'מדיניות פרטיות' },
 
