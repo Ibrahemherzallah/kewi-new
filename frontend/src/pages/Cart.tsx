@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { getProductPrice } from "@/lib/pricing";
 import ReCAPTCHA from "react-google-recaptcha";
+import { trackMetaEvent } from "@/utils/metaPixel";
 
 interface CartItem {
   id?: string;
@@ -343,6 +344,13 @@ const Cart = () => {
     }
 
     // 3) Clear + Toast
+    trackMetaEvent("Purchase", {
+      content_ids: productsPayload.map((item: any) => item.productId),
+      content_type: "product",
+      num_items: numOfItems,
+      value: totalWithDelivery,
+      currency: "ILS",
+    });
     updateCart([]);
     setCheckoutOpen(false);
     setFreeProductId(null);
@@ -456,6 +464,14 @@ const Cart = () => {
       const totalWithoutDelivery = Number(total.toFixed(2));
       const totalWithDelivery = Number(grandTotal.toFixed(2));
 
+      trackMetaEvent("InitiateCheckout", {
+        content_ids: cart.map((item: any) => item._id),
+        content_type: "product",
+        num_items: numOfItems,
+        value: totalWithDelivery,
+        currency: "ILS",
+      });
+
       if (formData.phone.length < 10) {
         toast({
           title: t('toast.err.phoneNotValid'),
@@ -511,6 +527,15 @@ const Cart = () => {
           productsPayload,
         });
       } else if (formData.paymentMethod === "visa") {
+
+        trackMetaEvent("AddPaymentInfo", {
+          content_ids: cart.map((item: any) => item._id),
+          content_type: "product",
+          num_items: numOfItems,
+          value: totalWithDelivery,
+          currency: "ILS",
+        });
+
         await handleVisaCheckout({
           purchaseBody,
           token,
@@ -710,6 +735,16 @@ const Cart = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const openCheckout = () => {
+    trackMetaEvent("InitiateCheckout", {
+      num_items: cartItems.reduce((sum: number, item: any) => sum + item.quantity, 0),
+      value: Number(grandTotal || 0),
+      currency: "ILS",
+    });
+
+    setCheckoutOpen(true);
   };
 
   // ---------- RENDER ----------
@@ -925,7 +960,7 @@ const Cart = () => {
                     </span>
                       </div>
                     </div>
-                    <Button className="w-full" size="lg" onClick={() => setCheckoutOpen(true)}>
+                    <Button className="w-full" size="lg" onClick={openCheckout}>
                       {t("cart.checkout")}
                     </Button>
                   </div>
@@ -1044,9 +1079,17 @@ const Cart = () => {
                         name="paymentMethod"
                         value="cash"
                         checked={formData.paymentMethod === "cash"}
-                        onChange={(e) =>
-                            setFormData((prev) => ({ ...prev, paymentMethod: e.target.value as "cash" | "visa" }))
-                        }
+                        onChange={(e) => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            paymentMethod: e.target.value as "cash" | "visa",
+                          }));
+
+                          trackMetaEvent("AddPaymentInfo", {
+                            value: Number(grandTotal || 0),
+                            currency: "ILS",
+                          });
+                        }}
                     />
                     <span className="text-sm">
                       {t("cart.checkoutDialog.payCash")}

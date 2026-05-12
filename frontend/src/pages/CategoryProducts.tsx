@@ -8,6 +8,7 @@ import { Search, ArrowLeft } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue,} from "@/components/ui/select";
 import { useSearchParams } from "react-router-dom";
+import {trackMetaEvent} from "@/utils/metaPixel.ts";
 
 const API_BASE = import.meta.env.VITE_ENV || "https://kewi.ps";
 const CATEGORY_PRODUCTS_API = (id: string) => `${API_BASE}/admin/api/products/category/${id}`;
@@ -335,6 +336,14 @@ const CategoryProducts = () => {
         localStorage.setItem("cart", JSON.stringify(cart));
 
         const productName = getProductName(product, language);
+
+        trackMetaEvent("AddToCart", {
+            content_ids: [product._id],
+            content_name: productName,
+            content_type: "product",
+            value: Number(product.price || 0),
+            currency: "ILS",
+        });
 
         toast({
             title: t("toast.addedToCart"),
