@@ -32,6 +32,7 @@ import DeliveryTerms from "@/pages/DeliveryTerms.tsx";
 import PaymentCallback from "./pages/PaymentCallback";
 import PrivacyPolicy from "@/pages/PrivacyPolicy.tsx";
 import ReturnPolicy from "./pages/ReturnPolicy.tsx";
+import MetaPixelPageView from "@/components/MetaPixelPageView";
 const queryClient = new QueryClient();
 
 // Language, theme, loyalty, and favorites providers configured
@@ -46,6 +47,7 @@ const App = () => (
                 <Toaster />
                 <Sonner />
                 <BrowserRouter>
+                  <MetaPixelPageView />
                   <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/products" element={<Products />} />
