@@ -10,6 +10,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import {Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious,} from "@/components/ui/carousel";
 import { Gift } from "lucide-react";
 import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,} from "@/components/ui/dialog";
+import {trackMetaEvent} from "@/utils/metaPixel.ts";
 
 // 🔹 API base
 const API_BASE = import.meta.env.VITE_ENV || "https://kewi.ps";
@@ -196,7 +197,13 @@ const Home = () => {
     localStorage.setItem("cart", JSON.stringify(cart));
 
     const productName = getProductName(product, language);
-
+    trackMetaEvent("AddToCart", {
+      content_ids: [product._id],
+      content_name: productName,
+      content_type: "product",
+      value: Number(product.price || 0),
+      currency: "ILS",
+    });
     toast({
       title: t("toast.addedToCart"),
       description: `${productName}${
