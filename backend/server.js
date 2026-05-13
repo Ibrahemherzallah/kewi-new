@@ -81,7 +81,8 @@ app.use(
                     "'unsafe-eval'",
                     "https://cdn.jsdelivr.net",
                     "https://www.google.com",
-                    "https://www.gstatic.com"
+                    "https://www.gstatic.com",
+                    "https://connect.facebook.net"
                 ],
 
                 styleSrc: [
@@ -95,7 +96,8 @@ app.use(
                     "data:",
                     "https://storage.googleapis.com",
                     "https://firebasestorage.googleapis.com",
-                    "https://www.google.com"
+                    "https://www.google.com",
+                    "https://www.facebook.com"
                 ],
 
                 frameSrc: [
@@ -110,7 +112,9 @@ app.use(
                     "https://www.google.com",
                     "https://www.gstatic.com",
                     "https://firebasestorage.googleapis.com",
-                    "https://storage.googleapis.com"
+                    "https://storage.googleapis.com",
+                    "https://connect.facebook.net",
+                    "https://www.facebook.com"
                 ],
 
                 workerSrc: ["'self'", "blob:"],
