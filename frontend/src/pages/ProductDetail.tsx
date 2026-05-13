@@ -9,6 +9,7 @@ import { ShoppingCart, ArrowLeft, Barcode } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigate, useLocation } from "react-router-dom";
+import {trackMetaEvent} from "@/utils/metaPixel.ts";
 
 const API_BASE = import.meta.env.VITE_ENV || "https://kewi.ps";
 const PRODUCT_API = (id: string) => `${API_BASE}/admin/api/products/${id}`;
@@ -199,7 +200,17 @@ const ProductDetail = () => {
 
 
 
+  const getProductName = (product: BackendProduct, language: string) => {
+    if (!product.name) return language === "ar" ? "منتج بدون اسم" : "Unnamed product";
+    if (typeof product.name === "string") return product.name;
 
+    return (
+        product.name[language] ||
+        product.name.en ||
+        Object.values(product.name)[0] ||
+        ""
+    );
+  };
   // ---------- PRICE LOGIC (UNIFIED WITH ProductCard) ----------
 
   const role = typeof window !== "undefined" ? localStorage.getItem("userRole") : null;
@@ -287,6 +298,14 @@ const ProductDetail = () => {
 
     // 🟦 6) Save updated cart
     localStorage.setItem("cart", JSON.stringify(cart));
+    const productName = getProductName(product, language);
+    trackMetaEvent("AddToCart", {
+      content_ids: [product._id],
+      content_name: productName,
+      content_type: "product",
+      value: Number(product.price || 0),
+      currency: "ILS",
+    });
 
     // 🟦 7) Toast confirmation
     toast({

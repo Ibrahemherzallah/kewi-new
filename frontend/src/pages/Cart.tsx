@@ -174,6 +174,13 @@ const Cart = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(()=>{
+    trackMetaEvent("AddPaymentInfo", {
+      value: Number(grandTotal || 0),
+      currency: "ILS",
+    });
+  },[checkoutOpen])
+
   // ---------- AUTO-FILL USER DATA WHEN LOGGED IN ----------
 
   useEffect(() => {
@@ -739,7 +746,7 @@ const Cart = () => {
 
   const openCheckout = () => {
     trackMetaEvent("InitiateCheckout", {
-      num_items: cartItems.reduce((sum: number, item: any) => sum + item.quantity, 0),
+      num_items: cart.reduce((sum: number, item: any) => sum + item.quantity, 0),
       value: Number(grandTotal || 0),
       currency: "ILS",
     });

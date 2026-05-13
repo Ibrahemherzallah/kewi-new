@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import {trackMetaEvent} from "@/utils/metaPixel.ts";
 
 type BackendProduct = {
   _id: string;
@@ -101,7 +102,13 @@ const Favorites = () => {
     localStorage.setItem("cart", JSON.stringify(cart));
 
     const productName = getProductName(product, language);
-
+    trackMetaEvent("AddToCart", {
+      content_ids: [product._id],
+      content_name: productName,
+      content_type: "product",
+      value: Number(product?.price || 0),
+      currency: "ILS",
+    });
     toast({
       title: t("toast.addedToCart"),
       description: `${productName}${
