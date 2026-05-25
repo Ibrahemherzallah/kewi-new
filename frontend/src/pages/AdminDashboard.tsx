@@ -100,7 +100,9 @@ const AdminDashboard = () => {
               <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center">
                 <BarChart3 className="h-6 w-6 text-accent" />
               </div>
-              <span className="text-2xl font-bold">${stats.monthlyRevenue}</span>
+              <span className="text-2xl font-bold">
+                ${stats.monthlyRevenue.toFixed(2)}
+              </span>
             </div>
             <div className="text-sm text-muted-foreground">Monthly Revenue</div>
           </Card>
