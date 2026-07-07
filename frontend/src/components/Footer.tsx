@@ -111,10 +111,16 @@ export const Footer = () => {
         <div className="border-t border-border mt-8 pt-8 text-center text-muted-foreground text-sm">
           <p>
             {language === 'en'
-              ? `© ${new Date().getFullYear()} Kewi. All rights reserved.`
-              : language === 'ar' ? `© ${new Date().getFullYear()} Kewi. جميع الحقوق محفوظة.`
-              : `© ${new Date().getFullYear()} Kewi. כֹּל הַזְכוּיוֹת שְׁמוּרוֹת.`
+                ? `© ${new Date().getFullYear()} Kewi. All rights reserved.`
+                : language === 'ar' ? `© ${new Date().getFullYear()} Kewi. جميع الحقوق محفوظة.`
+                    : `© ${new Date().getFullYear()} Kewi. כֹּל הַזְכוּיוֹת שְׁמוּרוֹת.`
             }
+          </p>
+          <p className="mt-1">
+            {language === 'en' ? 'Developed by' : language === 'ar' ? 'تطوير:' : 'פותח על ידי'}{' '}
+            <a href="tel:+972597250539" className="hover:text-primary transition-colors">
+              Ibrahem Herzallah· 059-7250539
+            </a>
           </p>
         </div>
       </div>
