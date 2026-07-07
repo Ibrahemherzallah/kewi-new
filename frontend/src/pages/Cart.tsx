@@ -324,31 +324,31 @@ const Cart = () => {
       throw new Error(errData?.message || "فشل في إرسال الطلب");
     }
 
-    // 2) send WhatsApp
-    const whatsappBody = {
-      cName: formData.name,
-      cNumber: formData.phone,
-      cAddress: formData.city,
-      cCity: formData.address || "",
-      notes: formData.notes,
-      price: totalWithDelivery,
-      totalPrice: totalWithoutDelivery,
-      numOfItems,
-      delivery: normalizeDelivery(selectedType),
-      type: isWholesalerUser ? "تاجر" : "زبون",
-      products: productsPayload,
-    };
-
-    const waRes = await fetch(`${import.meta.env.VITE_ENV}/user/api/purchase/send-whatsapp`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(whatsappBody),
-    });
-
-    if (!waRes.ok) {
-      const waErr = await waRes.json().catch(() => null);
-      throw new Error(waErr?.message || "فشل في إرسال رسالة واتساب");
-    }
+    // // 2) send WhatsApp
+    // const whatsappBody = {
+    //   cName: formData.name,
+    //   cNumber: formData.phone,
+    //   cAddress: formData.city,
+    //   cCity: formData.address || "",
+    //   notes: formData.notes,
+    //   price: totalWithDelivery,
+    //   totalPrice: totalWithoutDelivery,
+    //   numOfItems,
+    //   delivery: normalizeDelivery(selectedType),
+    //   type: isWholesalerUser ? "تاجر" : "زبون",
+    //   products: productsPayload,
+    // };
+    //
+    // const waRes = await fetch(`${import.meta.env.VITE_ENV}/user/api/purchase/send-whatsapp`, {
+    //   method: "POST",
+    //   headers: { "Content-Type": "application/json" },
+    //   body: JSON.stringify(whatsappBody),
+    // });
+    //
+    // if (!waRes.ok) {
+    //   const waErr = await waRes.json().catch(() => null);
+    //   throw new Error(waErr?.message || "فشل في إرسال رسالة واتساب");
+    // }
 
     // 3) Clear + Toast
     trackMetaEvent("Purchase", {
