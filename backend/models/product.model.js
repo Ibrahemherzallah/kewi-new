@@ -56,7 +56,8 @@ const productSchema = new mongoose.Schema({
   size: {
     type: String,
     required: false,
-    enum: ['صغير','وسط','كبير']
+    enum: [null, '', 'صغير', 'وسط', 'كبير'],
+    default: null,
   },
   customerPrice: {
     type: Number,
