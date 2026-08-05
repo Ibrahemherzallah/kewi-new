@@ -114,7 +114,10 @@ app.use(
                     "https://firebasestorage.googleapis.com",
                     "https://storage.googleapis.com",
                     "https://connect.facebook.net",
-                    "https://www.facebook.com"
+                    "https://www.facebook.com",
+                    "https://*.facebook.com",      // ← add this
+                    "https://*.amazonaws.com",     // ← add this
+                    "https://*.run.app",           // ← add this
                 ],
 
                 workerSrc: ["'self'", "blob:"],
