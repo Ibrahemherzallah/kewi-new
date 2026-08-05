@@ -115,9 +115,10 @@ app.use(
                     "https://storage.googleapis.com",
                     "https://connect.facebook.net",
                     "https://www.facebook.com",
-                    "https://*.facebook.com",      // ← add this
-                    "https://*.amazonaws.com",     // ← add this
-                    "https://*.run.app",           // ← add this
+                    "https://*.facebook.com",
+                    "https://*.amazonaws.com",
+                    "https://*.on.aws",
+                    "https://*.run.app",
                 ],
 
                 workerSrc: ["'self'", "blob:"],
