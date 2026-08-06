@@ -34,11 +34,18 @@ const userSchema = new mongoose.Schema(
             default: "user",
         },
 
-        // 🆕 order history: list of purchases
+
         orderHistory: [
             {
                 type: mongoose.Schema.Types.ObjectId,
                 ref: "Purchase",
+            },
+        ],
+        wholesalerCategories: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "Category",
+                default: [],
             },
         ],
         loyaltyPoints: {

@@ -211,7 +211,7 @@ const ProductDetail = () => {
         ""
     );
   };
-  // ---------- PRICE LOGIC (UNIFIED WITH ProductCard) ----------
+// ---------- PRICE LOGIC (UNIFIED WITH ProductCard) ----------
 
   const role = typeof window !== "undefined" ? localStorage.getItem("userRole") : null;
   const isWholesalerUser = role === "wholesaler";
@@ -220,24 +220,49 @@ const ProductDetail = () => {
   const wholesalerPrice: number = product?.wholesalerPrice ?? customerPrice;
   const salePrice: number | null = product?.salePrice ?? null;
 
+// ---------- CATEGORY-AWARE WHOLESALER CHECK ----------
+  const getWholesalerEligible = (): boolean => {
+    if (!isWholesalerUser) return false;
+    try {
+      const raw = localStorage.getItem("wholesalerCategories");
+      if (!raw) return true; // nothing stored → all categories
+
+      const allowedIds: string[] = JSON.parse(raw);
+      if (allowedIds.length === 0) return true; // empty → all categories
+
+      // categoryId can be a string or an object { _id, name }
+      const productCategoryId =
+          typeof product?.categoryId === "object" && product?.categoryId !== null
+              ? (product.categoryId as any)._id
+              : product?.categoryId;
+
+      if (!productCategoryId) return false;
+
+      return allowedIds.includes(String(productCategoryId));
+    } catch {
+      return true; // fallback: if parsing fails, allow
+    }
+  };
+
+  const isWholesaleEligible = getWholesalerEligible();
+
   let mainPrice = customerPrice;
   let oldPrice: number | null = null;
   let priceLabel: string | null = null;
 
-  if (isWholesalerUser) {
+  if (isWholesalerUser && isWholesaleEligible) {
     mainPrice = wholesalerPrice;
     oldPrice = customerPrice;
-    priceLabel = t('priceLabelWholesalePrice');
+    priceLabel = t('productDetails.priceLabelWholesalePrice');
   } else if (isOnSale && salePrice != null) {
     mainPrice = salePrice;
     oldPrice = customerPrice;
-    priceLabel = t('priceLabelSalePrice');
+    priceLabel = t('productDetails.priceLabelSalePrice');
   } else {
     mainPrice = customerPrice;
     oldPrice = null;
     priceLabel = null;
   }
-
   // ---------- CART HANDLER (store full backend object) ----------
 
   const handleAddToCart = (prod?: ApiProduct) => {

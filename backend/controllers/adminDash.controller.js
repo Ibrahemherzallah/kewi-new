@@ -14,7 +14,6 @@ export const getAdminDashboardStats = async (req, res) => {
 
                 // 3️⃣ Monthly Revenue (only shipped orders this month)
                 const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-                console.log("startOfMonth is: " , startOfMonth)
 
                 const monthlyRevenueAgg = await Purchase.aggregate([
                         {
@@ -30,7 +29,6 @@ export const getAdminDashboardStats = async (req, res) => {
                                 },
                         },
                 ]);
-
                 const monthlyRevenue =
                     monthlyRevenueAgg.length > 0 ? monthlyRevenueAgg[0].total : 0;
 

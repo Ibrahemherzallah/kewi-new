@@ -110,7 +110,8 @@ export const logIn = async (req, res) => {
                 phone: user.phone,
                 role: user.role,
                 address: user.address,
-                dob: dateOfBirth
+                dob: dateOfBirth,
+                wholesalerCategories: user.wholesalerCategories
             },
         });
     } catch (err) {

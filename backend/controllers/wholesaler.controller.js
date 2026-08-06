@@ -4,23 +4,20 @@ import mongoose from "mongoose";
 
 export const addWholesaler = async (req, res) => {
     try {
-        const { userName, password, phone, address } = req.body;
+        const { userName, password, phone, address, wholesalerCategories } = req.body;
 
-        // Check if the password is at least 8 characters long
         if (!password || password.length < 8) {
             return res.status(400).json({ error: "Password must be at least 8 characters long" });
         }
 
-        const user = await User.findOne({userName, role: "wholesaler"});
-
+        const user = await User.findOne({ userName, role: "wholesaler" });
         if (user) {
             return res.status(400).json({ error: "Wholesaler username already exists" });
         }
 
-        const phoneExists = await User.findOne({phone});
-
+        const phoneExists = await User.findOne({ phone });
         if (phoneExists) {
-            return res.status(400).json({ error: "phone already in use" });
+            return res.status(400).json({ error: "Phone already in use" });
         }
 
         const salt = await bcrypt.genSalt(10);
@@ -31,8 +28,10 @@ export const addWholesaler = async (req, res) => {
             password: hashedPass,
             phone,
             address,
-            isWholesaler:true,
-            role: 'wholesaler'
+            isWholesaler: true,
+            role: "wholesaler",
+            // if not provided or empty array → defaults to [] which means "all categories"
+            wholesalerCategories: Array.isArray(wholesalerCategories) ? wholesalerCategories : [],
         });
 
         await newUser.save();
@@ -42,14 +41,14 @@ export const addWholesaler = async (req, res) => {
             userName: newUser.userName,
             phone: newUser.phone,
             address: newUser.address,
-            isWholesaler: newUser.isWholesaler
+            isWholesaler: newUser.isWholesaler,
+            wholesalerCategories: newUser.wholesalerCategories,
         });
 
-        console.log("Data stored successfully");
+        console.log("Wholesaler stored successfully");
     } catch (e) {
         console.error("Error:", e.message);
-        if (e.name === 'ValidationError') {
-            // extract first validation error
+        if (e.name === "ValidationError") {
             const firstError = Object.values(e.errors)[0].message;
             return res.status(400).json({ error: firstError });
         }
@@ -86,57 +85,65 @@ export const deleteWholesaler = async (req, res) => {
 export const updateWholesaler = async (req, res) => {
     try {
         const { id } = req.params;
-        const { userName, password, phone, address, isWholesaler } = req.body;
+        const { userName, password, phone, address, isWholesaler, wholesalerCategories } = req.body;
 
-        if (phone && phone.length < 10) {
-            return res.status(400).json({ error: "Phone number must be at least 10 digits long" });
-        }
-
-        if (userName) {
-            const existingUser = await User.findOne({ userName, role: "wholesaler" });
-            if (existingUser && existingUser._id.toString() !== id) {
-                return res.status(400).json({ error: "Wholesaler username already exists" });
-            }
-        }
-
-        if (phone) {
-            const existingPhone = await User.findOne({ phone, role: "wholesaler" });
-            if (existingPhone && existingPhone._id.toString() !== id) {
-                return res.status(400).json({ error: "Wholesaler phone already in use" });
-            }
-        }
-
-        const updateData = {
-            userName,
-            phone,
-            address,
-            isWholesaler,
-        };
-
-        if (password) {
-            if (password.length < 8) {
-                return res.status(400).json({ error: "Password must be at least 8 characters long" });
-            }
-            const salt = await bcrypt.genSalt(10);
-            updateData.password = await bcrypt.hash(password, salt);
-        }
-
-        const updatedWholesaler = await User.findOneAndUpdate(
-            { _id: id, role: "wholesaler" },
-            updateData,
-            { new: true, runValidators: true }
-        );
-
-        if (!updatedWholesaler) {
+        const user = await User.findById(id);
+        if (!user) {
             return res.status(404).json({ error: "Wholesaler not found" });
         }
 
-        res.status(200).json(updatedWholesaler);
-    } catch (error) {
-        console.error("Error:", error.message);
+        if (phone && phone.length < 10) {
+            return res.status(400).json({ error: "Phone number must be at least 10 characters" });
+        }
+
+        if (password && password.length < 8) {
+            return res.status(400).json({ error: "Password must be at least 8 characters long" });
+        }
+
+        // Check phone uniqueness (excluding current user)
+        if (phone && phone !== user.phone) {
+            const phoneExists = await User.findOne({ phone, _id: { $ne: id } });
+            if (phoneExists) {
+                return res.status(400).json({ error: "Phone already in use" });
+            }
+        }
+
+        if (userName) user.userName = userName;
+        if (phone) user.phone = phone;
+        if (address !== undefined) user.address = address;
+        if (isWholesaler !== undefined) user.isWholesaler = isWholesaler;
+
+        // Update categories if provided
+        if (Array.isArray(wholesalerCategories)) {
+            user.wholesalerCategories = wholesalerCategories;
+        }
+
+        // Only update password if a new one was provided
+        if (password && password.trim()) {
+            const salt = await bcrypt.genSalt(10);
+            user.password = await bcrypt.hash(password, salt);
+        }
+
+        await user.save();
+
+        res.status(200).json({
+            _id: user._id,
+            userName: user.userName,
+            phone: user.phone,
+            address: user.address,
+            isWholesaler: user.isWholesaler,
+            wholesalerCategories: user.wholesalerCategories,
+        });
+    } catch (e) {
+        console.error("Error:", e.message);
+        if (e.name === "ValidationError") {
+            const firstError = Object.values(e.errors)[0].message;
+            return res.status(400).json({ error: firstError });
+        }
         res.status(500).json({ error: "Internal Server Error" });
     }
 };
+
 
 
 export const getWholesalers = async (req, res) => {

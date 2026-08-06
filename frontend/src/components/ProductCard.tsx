@@ -9,33 +9,28 @@ import { useLocation } from "react-router-dom";
 
 interface ProductCardProps {
     product: any;
-    showWholesale?: boolean; // (still here but we’ll mostly use role)
+    showWholesale?: boolean;
     onAddToCart?: (product: any) => void;
 }
 
-export const ProductCard = ({product, showWholesale = false, onAddToCart,}: ProductCardProps) => {
+export const ProductCard = ({ product, showWholesale = false, onAddToCart }: ProductCardProps) => {
     const { t, language } = useLanguage();
     const { toggleFavorite, isFavorite } = useFavorites();
     const location = useLocation();
-    // --------- NORMALIZATION HELPERS ----------
 
-    // id to use for URL / favorites
     const productId: string = product.id || (product as any)._id || "";
     const mongoId = product._id;
-// ---------- BIRTHDAY CHECK ----------
+
+    // ---------- BIRTHDAY CHECK ----------
     const getIsBirthdayToday = (): boolean => {
         if (typeof window === "undefined") return false;
-
         const userRaw = localStorage.getItem("user");
         if (!userRaw) return false;
-
         try {
             const user = JSON.parse(userRaw);
             if (!user.dob) return false;
-
             const dob = new Date(user.dob);
             const today = new Date();
-
             return (
                 dob.getDate() === today.getDate() &&
                 dob.getMonth() === today.getMonth()
@@ -46,7 +41,8 @@ export const ProductCard = ({product, showWholesale = false, onAddToCart,}: Prod
     };
 
     const isBirthdayToday = getIsBirthdayToday();
-    // images: support both `images` and `image`
+
+    // ---------- IMAGES ----------
     const rawImages = product.images ?? product.image ?? [];
     const images: string[] = Array.isArray(rawImages)
         ? rawImages
@@ -55,127 +51,120 @@ export const ProductCard = ({product, showWholesale = false, onAddToCart,}: Prod
             : [];
     const mainImage = images[0];
 
-    // name: can be string OR { en, ar, ... }
+    // ---------- NAME ----------
     const getName = (): string => {
         if (!product.name) return "";
         if (typeof product.name === "string") return product.name;
-        return (
-            product.name[language] ||
-            product.name.en ||
-            Object.values(product.name)[0] ||
-            ""
-        );
+        return product.name[language] || product.name.en || Object.values(product.name)[0] || "";
     };
 
-    // description same idea
+    // ---------- DESCRIPTION ----------
     const getDescription = (): string => {
         if (!product.description) return "";
         if (typeof product.description === "string") return product.description;
-        return (
-            product.description[language] ||
-            product.description.en ||
-            Object.values(product.description)[0] ||
-            ""
-        );
+        return product.description[language] || product.description.en || Object.values(product.description)[0] || "";
     };
 
-    // PRICES (based on your data fields)
+    // ---------- PRICES ----------
     const customerPrice: number = product.customerPrice ?? product.retailPrice ?? product.costPrice ?? 0;
-
     const wholesalerPrice: number = product.wholesalerPrice ?? product.wholesalePrice ?? customerPrice;
-
     const salePrice: number | null = product.salePrice ?? null;
 
-    const badgeEn = product?.isSoldOut
-        ? "sold out"
-        : product?.isOnSale
-            ? "on sale"
-            : product?.isSoon
-                ? "coming soon"
-                : "available";
-
-    const badgeAr = product?.isSoldOut
-        ? "نفذ"
-        : product?.isOnSale
-            ? "سعر العرض"
-            : product?.isSoon
-                ? "قريباً"
-                : "متوفر";
-
-    const badgeHe = product?.isSoldOut
-        ? "הַכַּרטִיסִים אָזלוּ"
-        : product?.isOnSale
-            ? "בִּמְכִירָה"
-            : product?.isSoon
-                ? "בקרוב"
-                : "זָמִין";
-
-    // stock: either stockNumber or warehouse+kewi
+    // ---------- STOCK ----------
     const totalStock: number = product.stockNumber ?? (product.warehouseQty ?? 0) + (product.kewiQty ?? 0);
-
     const isOnSale: boolean = Boolean(product.isOnSale);
     const isSoldOut: boolean = Boolean(product.isSoldOut) || totalStock <= 0;
 
-    // brand: string or nested object
+    // ---------- BRAND ----------
     const brandLabel: string =
-        typeof product.brand === "string"
-            ? product.brand
-            : product.brand?.name || "";
+        typeof product.brand === "string" ? product.brand : product.brand?.name || "";
 
     const name = getName();
     const description = getDescription();
 
-    // ---------- USER ROLE (wholesaler or not) ----------
+    // ---------- BADGES ----------
+    const badgeEn = product?.isSoldOut ? "sold out" : product?.isOnSale ? "on sale" : product?.isSoon ? "coming soon" : "available";
+    const badgeAr = product?.isSoldOut ? "نفذ" : product?.isOnSale ? "سعر العرض" : product?.isSoon ? "قريباً" : "متوفر";
+    const badgeHe = product?.isSoldOut ? "הַכַּרטִיסִים אָזלוּ" : product?.isOnSale ? "בִּמְכִירָה" : product?.isSoon ? "בקרוב" : "זָמִין";
+
+    // ---------- USER ROLE ----------
     const role = typeof window !== "undefined" ? localStorage.getItem("userRole") : null;
     const isWholesalerUser = role === "wholesaler";
 
-    // ---------- PRICE DISPLAY LOGIC (FINAL) ----------
+    // ---------- CATEGORY-AWARE WHOLESALER CHECK ----------
+    // wholesalerCategories is stored as JSON array of category IDs in localStorage
+    // Empty array [] means "all categories" (set when admin chose All Categories)
+    const getWholesalerEligible = (): boolean => {
+        if (!isWholesalerUser) return false;
+
+        try {
+            const raw = localStorage.getItem("wholesalerCategories");
+            if (!raw) return true; // nothing stored → treat as all
+
+            const allowedIds: string[] = JSON.parse(raw);
+            if (allowedIds.length === 0) return true; // empty → all categories
+
+            // product.categoryId can be a string ID or an object { _id, name }
+            const productCategoryId =
+                typeof product.categoryId === "object" && product.categoryId !== null
+                    ? product.categoryId._id
+                    : product.categoryId;
+
+            if (!productCategoryId) return false;
+
+            return allowedIds.includes(String(productCategoryId));
+        } catch {
+            return true; // fallback: if parsing fails, allow
+        }
+    };
+
+    const isWholesaleEligible = getWholesalerEligible();
+
+    // ---------- PRICE DISPLAY LOGIC ----------
     let mainPrice = customerPrice;
     let secondaryPrice: number | null = null;
     let mainLabel: string | null = null;
 
-// 🎂 Birthday rule has TOP priority
+    // 🎂 Birthday has TOP priority
     if (isBirthdayToday) {
-        if (salePrice != null && salePrice != 0) {
-            // show sale price if exists
+        if (salePrice != null && salePrice !== 0) {
             mainPrice = salePrice;
             secondaryPrice = customerPrice;
-            mainLabel = t('productCard.birthdayOffer');
+            mainLabel = t("productCard.birthdayOffer");
         } else {
-            // if no sale, give him wholesale price as gift
             mainPrice = wholesalerPrice;
             secondaryPrice = customerPrice;
-            mainLabel = t('productCard.birthdayOffer.desc');
+            mainLabel = t("productCard.birthdayOffer.desc");
         }
     }
 
-// 🏷️ Wholesaler rule (if not birthday)
-    else if (isWholesalerUser) {
+    // 🏷️ Wholesaler price — only if this product's category is allowed
+    else if (isWholesalerUser && isWholesaleEligible) {
         mainPrice = wholesalerPrice;
         secondaryPrice = customerPrice;
-        mainLabel = t('productCard.wholesalePrice');
+        mainLabel = t("productCard.wholesalePrice");
     }
 
-// 🔥 Normal sale rule
+    // 🔥 Normal sale
     else if (isOnSale && salePrice != null) {
         mainPrice = salePrice;
         secondaryPrice = customerPrice;
-        mainLabel = t('productCard.salePrice');
+        mainLabel = t("productCard.salePrice");
     }
 
-// 💰 Normal price
+    // 💰 Normal price
     else {
         mainPrice = customerPrice;
         secondaryPrice = null;
         mainLabel = null;
     }
+
     const isFav = isFavorite(mongoId);
 
     const handleFavoriteClick = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
         if (!productId) return;
-        // store full product in favorites
         toggleFavorite(product);
     };
 
@@ -184,7 +173,9 @@ export const ProductCard = ({product, showWholesale = false, onAddToCart,}: Prod
     return (
         <div className={cn("group product-card-hover bg-card rounded-2xl overflow-hidden border border-border shadow-soft relative", isSoldOut && "opacity-80")}>
             {/* Favorite Button */}
-            <button onClick={handleFavoriteClick} className={cn(
+            <button
+                onClick={handleFavoriteClick}
+                className={cn(
                     "absolute top-3 right-3 z-10 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300",
                     "bg-background/80 backdrop-blur-sm hover:bg-background shadow-md",
                     isFav && "text-red-500"
@@ -193,9 +184,7 @@ export const ProductCard = ({product, showWholesale = false, onAddToCart,}: Prod
                 <Heart
                     className={cn(
                         "h-5 w-5 transition-all",
-                        isFav
-                            ? "fill-red-500 text-red-500"
-                            : "text-muted-foreground hover:text-red-500"
+                        isFav ? "fill-red-500 text-red-500" : "text-muted-foreground hover:text-red-500"
                     )}
                 />
             </button>
@@ -203,28 +192,29 @@ export const ProductCard = ({product, showWholesale = false, onAddToCart,}: Prod
             {/* SALE / SOLD OUT BADGES */}
             {isOnSale && !isSoldOut && (
                 <Badge className="absolute top-3 left-3 z-10 bg-red-500 text-white">
-                    {t('productCard.sale')}
+                    {t("productCard.sale")}
                 </Badge>
             )}
             {isSoldOut && (
                 <Badge className="absolute top-3 left-3 z-10 bg-gray-700 text-white">
-                    {t('productCard.soldOut')}
+                    {t("productCard.soldOut")}
                 </Badge>
             )}
 
             <Link to={`/product/${mongoId ? mongoId : productId}${location.search}`}>
                 <div className="aspect-square overflow-hidden bg-muted flex items-center justify-center relative">
                     {mainImage ? (
-                        <img src={mainImage} alt={name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"/>
+                        <img
+                            src={mainImage}
+                            alt={name}
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
                     ) : (
-                        <span className="text-xs text-muted-foreground">
-                            {t('productCard.noImg')}
-                        </span>
-                                )}
-
+                        <span className="text-xs text-muted-foreground">{t("productCard.noImg")}</span>
+                    )}
                     {isSoldOut && (
                         <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white font-semibold text-lg">
-                            {t('productCard.unavailable')}
+                            {t("productCard.unavailable")}
                         </div>
                     )}
                 </div>
@@ -247,22 +237,14 @@ export const ProductCard = ({product, showWholesale = false, onAddToCart,}: Prod
                 <div className="flex items-center gap-2">
                     {Number.isFinite(totalStock) && (
                         <Badge
-                            variant={
-                                isSoldOut
-                                    ? "destructive"
-                                    : totalStock > 50
-                                        ? "default"
-                                        : "destructive"
-                            }
+                            variant={isSoldOut ? "destructive" : totalStock > 50 ? "default" : "destructive"}
                             className="text-xs"
                         >
                             {language === "ar" ? badgeAr : language === "he" ? badgeHe : badgeEn}
                         </Badge>
                     )}
                     {brandLabel && (
-                        <span className="text-xs text-muted-foreground">
-                          {brandLabel}
-                        </span>
+                        <span className="text-xs text-muted-foreground">{brandLabel}</span>
                     )}
                 </div>
 
@@ -279,9 +261,7 @@ export const ProductCard = ({product, showWholesale = false, onAddToCart,}: Prod
                         )}
 
                         {mainLabel && (
-                            <div className="text-xs text-muted-foreground">
-                                {mainLabel}
-                            </div>
+                            <div className="text-xs text-muted-foreground">{mainLabel}</div>
                         )}
                     </div>
 
