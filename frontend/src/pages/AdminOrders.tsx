@@ -46,6 +46,7 @@ interface Purchase {
   confirmedAt?: string;
   shippedAt?: string;
   deliveredAt?: string;
+  paymentMethod?: string;
 }
 
 const API_BASE = import.meta.env.VITE_ENV || "https://kewi.ps";
@@ -74,46 +75,67 @@ const AdminOrders = () => {
       console.error("Failed to copy:", err);
     }
   };
-  const handlePrintInvoice = (order: Purchase) => {
-        const printWindow = window.open("", "_blank", "width=800,height=900");
-        if (!printWindow) return;
-        let deliveryPrice = 0;
+  const handlePrintInvoice = async (order: Purchase) => {
+    console.log("order is : ", order)
+    const printWindow = window.open("", "_blank", "width=800,height=900");
+    if (!printWindow) return;
 
-        switch (order?.city) {
-          case 'West Bank':
-          case 'הגדה המערבית':
-          case 'الضفة الغربية':
-            deliveryPrice =
-                order?.deliveryType === 'مستعجل' ? 20 : 10;
-            break;
+    // Fetch product images for each product in the order
+    const productsWithImages = await Promise.all(
+        order.products.map(async (p) => {
+          try {
+            console.log("p is:", p);                    // ← see full product object
+            console.log("productId:", p.productId);     // ← is it undefined?
 
-          case '48 Territories':
-          case '48 טריטוריות':
-          case 'الداخل':
-            deliveryPrice =
-                order?.deliveryType === 'مستعجل' ? 70 : 50;
-            break;
+            const res = await fetch(`${API_BASE}/admin/api/products/${p.productId}`);
+            if (!res.ok) return { ...p, imageUrl: null };
 
-          case 'Jerusalem':
-          case 'יְרוּשָׁלַיִם':
-          case 'القدس':
-            deliveryPrice =
-                order?.deliveryType === 'مستعجل' ? 30 : 20;
-            break;
+            const data = await res.json();
+            console.log("data is:", data);              // ← see what fields exist
+            console.log("data.image:", data.image);     // ← is it here?
+            console.log("data.images:", data.images);   // ← or here?
 
-          default:
-            deliveryPrice = 0;
-        }
-        // const deliveryPrice = city ? 'West Bank' : ;
-        const dir = language === "ar" ? "rtl" : "ltr";
-        const textAlign = language === "ar" ? "right" : "left";
+            const images = data.image ?? data.images ?? [];
+            const imageUrl = Array.isArray(images) ? images[0] : images;
+            console.log("imageUrl:", imageUrl);         // ← final result
 
-        const createdDate = new Date(order.createdAt).toLocaleString("en-GB", {
-            dateStyle: "short",
-            timeStyle: "short",
-        });
+            return { ...p, imageUrl: imageUrl || null };
+          } catch (err) {
+            console.error("fetch error:", err);
+            return { ...p, imageUrl: null };
+          }
+        })
+    );
 
-        const html = `
+    let deliveryPrice = 0;
+    switch (order?.city) {
+      case 'West Bank':
+      case 'הגדה המערבית':
+      case 'الضفة الغربية':
+        deliveryPrice = order?.deliveryType === 'مستعجل' ? 20 : 10;
+        break;
+      case '48 Territories':
+      case '48 טריטוריות':
+      case 'الداخل':
+        deliveryPrice = order?.deliveryType === 'مستعجل' ? 70 : 50;
+        break;
+      case 'Jerusalem':
+      case 'יְרוּשָׁלַיִם':
+      case 'القدس':
+        deliveryPrice = order?.deliveryType === 'مستعجل' ? 30 : 20;
+        break;
+      default:
+        deliveryPrice = 0;
+    }
+
+    const dir = language === "ar" ? "rtl" : "ltr";
+    const textAlign = language === "ar" ? "right" : "left";
+    const createdDate = new Date(order.createdAt).toLocaleString("en-GB", {
+      dateStyle: "short",
+      timeStyle: "short",
+    });
+
+    const html = `
     <html lang="${language}" dir="${dir}">
       <head>
         <title>Invoice - ${order._id}</title>
@@ -130,49 +152,36 @@ const AdminOrders = () => {
             align-items: center;
             margin-bottom: 24px;
           }
-          .store-name {
-            font-size: 22px;
-            font-weight: 700;
+          .store-name { font-size: 22px; font-weight: 700; }
+          .section-title { font-size: 16px; font-weight: 600; margin: 16px 0 8px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+          th, td { border: 1px solid #ddd; padding: 8px; font-size: 13px; }
+          th { background-color: #f5f5f5; }
+          .product-img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 6px;
+            display: block;
+            margin: auto;
           }
-          .section-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin: 16px 0 8px;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 8px;
-          }
-          th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            font-size: 13px;
-          }
-          th {
-            background-color: #f5f5f5;
-          }
-          .totals {
-            margin-top: 16px;
+          .no-img {
+            width: 60px;
+            height: 60px;
+            background: #f0f0f0;
+            border-radius: 6px;
             display: flex;
-            justify-content: flex-end;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #999;
+            margin: auto;
           }
-          .totals-table {
-            width: 280px;
-            border-collapse: collapse;
-          }
-          .totals-table td {
-            border: 1px solid #ddd;
-            padding: 6px 8px;
-            font-size: 14px;
-          }
-          .totals-table tr:last-child td {
-            font-weight: 700;
-          }
-          .small {
-            font-size: 12px;
-            color: #666;
-          }
+          .totals { margin-top: 16px; display: flex; justify-content: flex-end; }
+          .totals-table { width: 280px; border-collapse: collapse; }
+          .totals-table td { border: 1px solid #ddd; padding: 6px 8px; font-size: 14px; }
+          .totals-table tr:last-child td { font-weight: 700; }
+          .small { font-size: 12px; color: #666; }
         </style>
       </head>
       <body>
@@ -209,6 +218,7 @@ const AdminOrders = () => {
           <table>
             <thead>
               <tr>
+                <th>${language === "ar" ? "صورة" : "Image"}</th>
                 <th>${language === "ar" ? "المنتج" : "Product"}</th>
                 <th>${language === "ar" ? "اللون" : "Color"}</th>
                 <th>${language === "ar" ? "الكمية" : "Qty"}</th>
@@ -217,11 +227,14 @@ const AdminOrders = () => {
               </tr>
             </thead>
             <tbody>
-              ${order.products
-            .map((p) => {
+              ${productsWithImages.map((p: any) => {
                 const lineTotal = (p.price || 0) * p.quantity;
+                const imgHtml = p.imageUrl
+                    ? `<img src="${p.imageUrl}" class="product-img" />`
+                    : `<div class="no-img">${language === "ar" ? "لا صورة" : "No img"}</div>`;
                 return `
                     <tr>
+                      <td>${imgHtml}</td>
                       <td>${p.name || p.id || ""}</td>
                       <td>${p.color || "-"}</td>
                       <td>${p.quantity}</td>
@@ -229,8 +242,7 @@ const AdminOrders = () => {
                       <td>${lineTotal.toFixed(2)} ₪</td>
                     </tr>
                   `;
-            })
-            .join("")}
+              }).join("")}
             </tbody>
           </table>
         </div>
@@ -251,67 +263,46 @@ const AdminOrders = () => {
             </tr>
             <tr>
               <td>${language === "ar" ? "الإجمالي النهائي" : "Final total"}</td>
-              <td>${order.totalPrice + deliveryPrice} ₪</td>
+              <td>${(order.totalPrice + deliveryPrice).toFixed(2)} ₪</td>
             </tr>
           </table>
         </div>
+
         <div style="margin-top: 24px;" class="small">
-          ${
-                    language === "ar"
-                        ? `
-              <div style="font-weight:600; margin-bottom:6px;">سياسة الإرجاع والاستبدال:</div>
-              <div style="margin-bottom:4px;">
-                يُقبل الإرجاع أو الاستبدال خلال 24 ساعة بشرط أن يكون المنتج بحالته الأصلية وبتغليفه الكامل.
-              </div>
-              <div style="margin-bottom:4px;">
-                لا يشمل الإرجاع منتجات العروض أو التصفيات إلا في حال وجود عيب مصنعي.
-              </div>
-              <ul style="margin:6px 0 0; padding-${dir === "rtl" ? "right" : "left"}: 18px;">
-                <li>يتحمل العميل رسوم الشحن إذا لم يكن الخطأ من المتجر.</li>
-              </ul>
-              <div style="margin-top:4px;">
-                يتم فحص المنتج قبل الموافقة، ويُعاد المبلغ حسب وسيلة الدفع خلال المدة المحددة.
-              </div>
-              `
-                        : `
-              <div style="font-weight:600; margin-bottom:6px;">Return & Exchange Policy:</div>
-              <div style="margin-bottom:4px;">
-                Returns or exchanges are accepted within 24 hours, provided the product is in its original condition with complete packaging.
-              </div>
-              <div style="margin-bottom:4px;">
-                Items from sales or clearance are not eligible for return unless there is a manufacturing defect.
-              </div>
-              <ul style="margin:6px 0 0; padding-left:18px;">
-                <li>The customer bears shipping fees if the error is not from the store.</li>
-              </ul>
-              <div style="margin-top:4px;">
-                The product is inspected before approval, and refunds are processed based on the payment method within the specified period.
-              </div>
-              `
-                }
+          ${language === "ar" ? `
+            <div style="font-weight:600; margin-bottom:6px;">سياسة الإرجاع والاستبدال:</div>
+            <div style="margin-bottom:4px;">يُقبل الإرجاع أو الاستبدال خلال 24 ساعة بشرط أن يكون المنتج بحالته الأصلية وبتغليفه الكامل.</div>
+            <div style="margin-bottom:4px;">لا يشمل الإرجاع منتجات العروض أو التصفيات إلا في حال وجود عيب مصنعي.</div>
+            <ul style="margin:6px 0 0; padding-right: 18px;"><li>يتحمل العميل رسوم الشحن إذا لم يكن الخطأ من المتجر.</li></ul>
+            <div style="margin-top:4px;">يتم فحص المنتج قبل الموافقة، ويُعاد المبلغ حسب وسيلة الدفع خلال المدة المحددة.</div>
+          ` : `
+            <div style="font-weight:600; margin-bottom:6px;">Return & Exchange Policy:</div>
+            <div style="margin-bottom:4px;">Returns or exchanges are accepted within 24 hours, provided the product is in its original condition with complete packaging.</div>
+            <div style="margin-bottom:4px;">Items from sales or clearance are not eligible for return unless there is a manufacturing defect.</div>
+            <ul style="margin:6px 0 0; padding-left:18px;"><li>The customer bears shipping fees if the error is not from the store.</li></ul>
+            <div style="margin-top:4px;">The product is inspected before approval, and refunds are processed based on the payment method within the specified period.</div>
+          `}
         </div>
+
         <p class="small" style="margin-top:24px;">
-          ${language === "ar"
-            ? "شكراً لتسوقكم معنا."
-            : "Thank you for shopping with us."}
+          ${language === "ar" ? "شكراً لتسوقكم معنا." : "Thank you for shopping with us."}
         </p>
 
         <script>
           window.onload = function () {
             window.focus();
             window.print();
-            // Uncomment if you *want* it to auto-close after printing:
-            // window.close();
           };
         </script>
       </body>
     </html>
   `;
 
-        printWindow.document.open();
-        printWindow.document.write(html);
-        printWindow.document.close();
-    };
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   const openOrderDrawer = (order: Purchase) => {
     setSelectedOrder(order);
     setDrawerOpen(true);

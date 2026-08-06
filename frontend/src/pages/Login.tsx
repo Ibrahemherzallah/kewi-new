@@ -46,6 +46,7 @@ const Login = () => {
       localStorage.setItem("token", data.token);
       localStorage.setItem("userRole", data.user.role);
       localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem("wholesalerCategories", JSON.stringify(data.user.wholesalerCategories ?? []));
 
       toast({
         title: t('toast.welcome'),

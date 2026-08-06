@@ -30,6 +30,32 @@ export const getProductPrice = (item: any, language: string) => {
     const isWholesalerUser = role === "wholesaler";
     const birthday = isBirthdayToday();
 
+    // ---------- CATEGORY-AWARE WHOLESALER CHECK ----------
+    const getWholesalerEligible = (): boolean => {
+        if (!isWholesalerUser) return false;
+        try {
+            const raw = localStorage.getItem("wholesalerCategories");
+            if (!raw) return true; // nothing stored → all categories
+
+            const allowedIds: string[] = JSON.parse(raw);
+            if (allowedIds.length === 0) return true; // empty → all categories
+
+            // categoryId can be a string or an object { _id, name }
+            const productCategoryId =
+                typeof item.categoryId === "object" && item.categoryId !== null
+                    ? item.categoryId._id
+                    : item.categoryId;
+
+            if (!productCategoryId) return false;
+
+            return allowedIds.includes(String(productCategoryId));
+        } catch {
+            return true; // fallback: allow if parsing fails
+        }
+    };
+
+    const isWholesaleEligible = getWholesalerEligible();
+
     let mainPrice = customer;
     let oldPrice: number | null = null;
     let label: string | null = null;
@@ -47,8 +73,8 @@ export const getProductPrice = (item: any, language: string) => {
         }
     }
 
-    // 🧑‍💼 Wholesaler
-    else if (isWholesalerUser) {
+    // 🧑‍💼 Wholesaler — only if category is allowed
+    else if (isWholesalerUser && isWholesaleEligible) {
         mainPrice = wholesale;
         oldPrice = customer;
         label = language === "ar" ? "سعر الجملة" : "Wholesale";
