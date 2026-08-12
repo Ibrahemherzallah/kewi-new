@@ -116,12 +116,12 @@ export const Footer = () => {
                     : `© ${new Date().getFullYear()} Kewi. כֹּל הַזְכוּיוֹת שְׁמוּרוֹת.`
             }
           </p>
-          <p className="mt-1">
-            {language === 'en' ? 'Developed by' : language === 'ar' ? 'تطوير:' : 'פותח על ידי'}{' '}
-            <a href="tel:+972597250539" className="hover:text-primary transition-colors">
-              Ibrahem Herzallah· 059-7250539
-            </a>
-          </p>
+          {/*<p className="mt-1">*/}
+          {/*  {language === 'en' ? 'Developed by' : language === 'ar' ? 'تطوير:' : 'פותח על ידי'}{' '}*/}
+          {/*  <a href="tel:+972597250539" className="hover:text-primary transition-colors">*/}
+          {/*    Ibrahem Herzallah· 059-7250539*/}
+          {/*  </a>*/}
+          {/*</p>*/}
         </div>
       </div>
     </footer>

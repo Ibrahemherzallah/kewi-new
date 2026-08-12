@@ -5,16 +5,19 @@ import {Package, ShoppingBag, BarChart3, Users, ArrowLeft, Tag, FolderTree, Buil
 import {useLanguage} from "@/contexts/LanguageContext.tsx";
 import {LanguageToggle} from "@/components/LanguageToggle.tsx";
 import {ThemeToggle} from "@/components/ThemeToggle.tsx";
-import { useEffect, useState } from "react";
+import {useEffect, useRef, useState} from "react";
 import axios from "axios";
+import { useToast } from "@/hooks/use-toast";
 
 
 const AdminDashboard = () => {
-
   const navigate = useNavigate();
   const { language } = useLanguage();
   const token = localStorage.getItem("token");
-
+  const [exporting,setExporting] = useState(false);
+  const { toast } = useToast();
+  const clickCountRef = useRef(0);
+  const clickTimerRef = useRef(null);
   const [stats, setStats] = useState({
     totalProducts: 0,
     pendingOrders: 0,
@@ -28,6 +31,56 @@ const AdminDashboard = () => {
     localStorage.removeItem("user");
     navigate("/");
   };
+  console.log("clickCountRef.current ", clickCountRef.current)
+  const handleWholesalerCardClick = () => {
+    clickCountRef.current += 1;
+    console.log("clickCountRef out ", clickCountRef.current)
+
+    // Reset count after 1 second of no clicks
+    clearTimeout(clickTimerRef.current);
+    clickTimerRef.current = setTimeout(() => {
+      clickCountRef.current = 0;
+    }, 1000);
+
+    if (clickCountRef.current === 3) {
+      console.log("clickCountRef inn ", clickCountRef.current)
+
+      clickCountRef.current = 0;
+      clearTimeout(clickTimerRef.current);
+      handleExport();
+    }
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_ENV}/export/api`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) throw new Error('Export failed');
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `store-export-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      toast({
+        title: "فشل التصدير",
+        variant: 'destructive'
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -63,13 +116,15 @@ const AdminDashboard = () => {
               <p className="text-muted-foreground">Manage your Kewi store</p>
             </div>
           </div>
-          <div className={`flex gap-3`}>
-            <LanguageToggle  />
-            <ThemeToggle />
-            <Button variant="outline" size="sm" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-1" />
-              {language === "ar" ? "تسجيل الخروج" : "Logout"}
-            </Button>
+          <div className={''}>
+            <div className={`flex gap-3`}>
+              <LanguageToggle  />
+              <ThemeToggle />
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                <LogOut className="h-4 w-4 mr-1" />
+                {language === "ar" ? "تسجيل الخروج" : "Logout"}
+              </Button>
+            </div>
           </div>
 
         </div>
@@ -107,7 +162,10 @@ const AdminDashboard = () => {
             <div className="text-sm text-muted-foreground">Monthly Revenue</div>
           </Card>
 
-          <Card className="p-6 space-y-3 border-border hover:shadow-medium transition-shadow">
+          <Card
+              className="p-6 space-y-3 border-border hover:shadow-medium transition-shadow cursor-pointer"
+              onClick={handleWholesalerCardClick}
+          >
             <div className="flex items-center justify-between">
               <div className="w-12 h-12 bg-warning/10 rounded-xl flex items-center justify-center">
                 <Users className="h-6 w-6 text-warning" />
