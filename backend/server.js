@@ -11,6 +11,7 @@ import homeRoutes from './routes/userRoutes/home.routes.js';
 import usersRoutes from './routes/userRoutes/user.routes.js';
 import userProductRoutes from './routes/userRoutes/product.routes.js';
 import adminDashboardRoutes from './routes/adminRoutes/dashboard.routes.js';
+import exportDataRoutes from './routes/export-data.routes.js';
 import cors from 'cors';
 import session from "express-session";
 import helmet from 'helmet';
@@ -211,7 +212,7 @@ app.use('/admin/api', adminDashboardRoutes);
 app.use('/auth/api', authRoutes);
 app.use('/user/api', homeRoutes);
 app.use('/user/api', userProductRoutes);
-app.use('/user/api', userProductRoutes);
+app.use('/export/api', exportDataRoutes);
 
 // ✅ CATCH-ALL MUST BE LAST
 app.get('*', (req, res) => {
