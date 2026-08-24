@@ -111,7 +111,12 @@ export const Navbar = ({ cartCount = 0 }: NavbarProps) => {
             {/* Actions */}
             <div className="flex items-center gap-2">
               <LanguageToggle apply={true}  />
-              <ThemeToggle />
+
+              <div className="hidden md:flex">
+                <ThemeToggle />
+              </div>
+
+              {/*<ThemeToggle />*/}
 
               <Link to="/favorites">
                 <Button variant="ghost" size="icon" className="btn-scale relative">
@@ -149,7 +154,7 @@ export const Navbar = ({ cartCount = 0 }: NavbarProps) => {
               <div className="md:hidden py-4 animate-slide-in border-t border-border">
                 {/* Language toggle row */}
                 <div className="px-4 mb-3">
-                  <LanguageToggle apply={false}  />
+                  <ThemeToggle />
                 </div>
 
                 {/* Menu links */}
