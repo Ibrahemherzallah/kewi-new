@@ -4,13 +4,12 @@ import { useLanguage } from "@/contexts/LanguageContext";
 
 const languages = ["en", "ar", "he"] as const;
 
-export const LanguageToggle = ({ apply }) => {
+export const LanguageToggle = ({ apply }: { apply?: boolean }) => {
   const { language, setLanguage } = useLanguage();
 
   const handleChangeLanguage = () => {
     const currentIndex = languages.indexOf(language);
     const nextIndex = (currentIndex + 1) % languages.length;
-
     setLanguage(languages[nextIndex]);
   };
 
@@ -25,13 +24,12 @@ export const LanguageToggle = ({ apply }) => {
           variant="ghost"
           size="icon"
           onClick={handleChangeLanguage}
-          className={`${apply ? "hidden md:flex" : ""} btn-scale`}
+          className="btn-scale"
       >
         <Languages className="h-5 w-5" />
-
         <span className="ml-2 text-sm font-medium">
-        {languageLabel[language]}
-      </span>
+          {languageLabel[language]}
+        </span>
       </Button>
   );
 };
