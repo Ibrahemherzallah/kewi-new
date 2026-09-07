@@ -204,7 +204,7 @@ const PrivacyPolicy = () => {
                                 <div>
                                     <ul className={`list-disc ${isAr ? "pr-5" : "pl-5"} space-y-1`}>
                                         <li>
-                                            {t("privacy.contactUs.email")} kewi.group1@gmail.com
+                                            {t("privacy.contactUs.email")} info@kewi.ps
                                         </li>
                                         <li>
                                             {t("privacy.contactUs.phone")} +972599128813

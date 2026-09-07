@@ -117,7 +117,7 @@ const ReturnPolicy = () => {
                                 dir={isAr ? "rtl" : "ltr"}
                             >
                                 <ul className={`list-disc ${isAr ? "pr-5" : "pl-5"} space-y-1`}>
-                                    <li>📧 kewi.group1@gmail.com</li>
+                                    <li>📧 info@kewi.ps</li>
                                     <li>📞 +972599128813</li>
                                 </ul>
                             </div>
