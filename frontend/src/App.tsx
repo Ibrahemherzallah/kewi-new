@@ -33,6 +33,7 @@ import PaymentCallback from "./pages/PaymentCallback";
 import PrivacyPolicy from "@/pages/PrivacyPolicy.tsx";
 import ReturnPolicy from "./pages/ReturnPolicy.tsx";
 import MetaPixelPageView from "@/components/MetaPixelPageView";
+import GaPageView from "./components/GaPageView.tsx";
 const queryClient = new QueryClient();
 
 // Language, theme, loyalty, and favorites providers configured
@@ -48,6 +49,7 @@ const App = () => (
                 <Sonner />
                 <BrowserRouter>
                   <MetaPixelPageView />
+                  <GaPageView />
                   <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/products" element={<Products />} />
