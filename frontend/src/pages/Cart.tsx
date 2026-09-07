@@ -69,7 +69,7 @@ const Cart = () => {
   });
   const [cities] = useState([
     { name: { ar: "الضفة الغربية", en: "West Bank", he: 'הגדה המערבית' }, region: "w" },
-    { name: { ar: "الداخل", en: "48 Territories" , he: '48 טריטוריות'}, region: "d" },
+    { name: { ar: "مناطق ٤٨", en: "Israeli areas" , he: 'אזורים ישראליים'}, region: "d" },
     { name: { ar: "القدس", en: "Jerusalem" , he: 'יְרוּשָׁלַיִם'}, region: "q" },
   ]);
   const [deliveryTypes] = useState([
@@ -119,7 +119,7 @@ const Cart = () => {
   // unified price logic
 
   const [confirmDiscountOpen, setConfirmDiscountOpen] = useState(false);
-
+  const [orderSuccessOpen, setOrderSuccessOpen] = useState(false);
   // ---------- LOAD CART ----------
   useEffect(() => {
     const paymentSuccess = localStorage.getItem("paymentSuccess");
@@ -143,6 +143,9 @@ const Cart = () => {
 
       // remove flag
       localStorage.removeItem("paymentSuccess");
+
+      // 👇 show the success popup
+      setOrderSuccessOpen(true);
     }
   }, []);
 
@@ -367,10 +370,7 @@ const Cart = () => {
     setSelectedType("");
     setDeliveryPrice(0);
 
-    toast({
-      title: t("toast.orderPlaced"),
-      description: t("toast.orderDesc"),
-    });
+    setOrderSuccessOpen(true);
   };
 
   const handleVisaCheckout = async ({purchaseBody, totalWithDelivery,}: { purchaseBody: any; totalWithDelivery: number; }) => {
@@ -1225,6 +1225,32 @@ const Cart = () => {
                 {t("common.cancel")}
               </AlertDialogCancel>
               <AlertDialogAction onClick={handleConfirmFreeProduct}>
+                {t("common.confirm")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        <AlertDialog open={orderSuccessOpen} onOpenChange={setOrderSuccessOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <Gift className="h-5 w-5 text-primary" />
+                {language === "ar"
+                    ? "تم استلام طلبك بنجاح"
+                    : language === "he"
+                        ? "הזמנתך התקבלה בהצלחה"
+                        : "Order placed successfully"}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {language === "ar"
+                    ? "شكراً لك! سنتواصل معك قريباً لتأكيد الطلب."
+                    : language === "he"
+                        ? "תודה! ניצור איתך קשר בקרוב לאישור ההזמנה."
+                        : "Thank you! We'll contact you soon to confirm your order."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction onClick={() => setOrderSuccessOpen(false)}>
                 {t("common.confirm")}
               </AlertDialogAction>
             </AlertDialogFooter>

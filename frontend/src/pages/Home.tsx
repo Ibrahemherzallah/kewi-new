@@ -114,7 +114,7 @@ const Home = () => {
           const prods: BackendProduct[] = await prodRes.json();
 
           // Take first 4 as featured, but keep REAL shape
-          const top = (prods || []).slice(0, 4).filter(Boolean);
+          const top = (prods || []).slice(0, 8).filter(Boolean);
 
           setFeaturedProducts(top);
         }

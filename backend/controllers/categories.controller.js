@@ -8,7 +8,7 @@ import { bucket } from "../utils/firebaseConfig.js";
 export const addCategory = async (req, res) => {
     try {
         const { name, description, other, image } = req.body; // 👈 image can be a URL now
-
+        const count = await Category.countDocuments();
         const existing = await Category.findOne({ name });
         if (existing) {
             return res.status(400).json({ error: "category exists" });
@@ -17,8 +17,9 @@ export const addCategory = async (req, res) => {
         const newCategory = new Category({
             name,
             description,
-            image: image || "",       // 👈 if frontend sent a URL, use it
+            image: image || "",
             other: other ?? false,
+            order: count,
         });
 
         await newCategory.save();
@@ -39,13 +40,51 @@ export const addCategory = async (req, res) => {
 
 export const getCategories = async (req, res) => {
     try {
-        const category = await Category.find();
+        const category = await Category.find().sort({ order: 1 });
         res.status(200).json(category);
     } catch (error) {
         console.error("Error fetching categories:", error);
         res.status(500).json({ error: error.message });
     }
 }
+
+
+export const reorderCategories = async (req, res) => {
+    try {
+        const { idA, idB } = req.body; // swap order between these two
+
+        const [catA, catB] = await Promise.all([
+            Category.findById(idA),
+            Category.findById(idB),
+        ]);
+
+        if (!catA || !catB) {
+            return res.status(404).json({ error: "Category not found" });
+        }
+
+        // swap
+        const tempOrder = catA.order;
+        catA.order = catB.order;
+        catB.order = tempOrder;
+
+        await Promise.all([catA.save(), catB.save()]);
+
+        res.status(200).json({ message: "Reordered successfully" });
+    } catch (err) {
+        console.error("Error reordering:", err);
+        res.status(500).json({ error: err.message });
+    }
+};
+
+
+export const seedCategoryOrder = async (req, res) => {
+    const cats = await Category.find().sort({ createdAt: 1 });
+    for (let i = 0; i < cats.length; i++) {
+        cats[i].order = i;
+        await cats[i].save();
+    }
+    res.json({ message: "Seeded", count: cats.length });
+};
 
 export const updateCategory = async (req, res) => {
     try {

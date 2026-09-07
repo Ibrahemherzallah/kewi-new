@@ -75,7 +75,7 @@ export const Navbar = ({ cartCount = 0 }: NavbarProps) => {
 
   return (
       <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur-lg border-b border-border shadow-soft">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-1 md:px-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link to="/" className={`flex items-center ${theme === "dark" ? '' : 'gap-3'}`}>
@@ -109,7 +109,7 @@ export const Navbar = ({ cartCount = 0 }: NavbarProps) => {
             </div>
 
             {/* Actions */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center">
               <LanguageToggle apply={true}  />
 
               <div className="hidden md:flex">

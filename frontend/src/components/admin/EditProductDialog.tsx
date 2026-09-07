@@ -52,6 +52,7 @@ type Product = {
     id?: string;
     image?: string[];
     categoryId?: any;
+    categories?: any[];
     brandId?: any;
     stockNumber?: number;
     gender?: string;
@@ -115,6 +116,9 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({open, onOpe
             typeof product.categoryId === "object"
                 ? product.categoryId?._id || ""
                 : (product.categoryId as string) || "",
+        categories: (product.categories || []).map((c: any) =>
+            typeof c === "object" ? c._id : c
+        ),
         brandId:
             typeof product.brandId === "object"
                 ? product.brandId?._id || ""
@@ -139,6 +143,9 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({open, onOpe
                 typeof product.categoryId === "object"
                     ? product.categoryId?._id || ""
                     : (product.categoryId as string) || "",
+            categories: (product.categories || []).map((c: any) =>
+                typeof c === "object" ? c._id : c
+            ),
             brandId:
                 typeof product.brandId === "object"
                     ? product.brandId?._id || ""
@@ -282,20 +289,13 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({open, onOpe
         setVariants((prev) => prev.filter((_, i) => i !== index));
     };
 
-    const handleVariantChange = (
-        index: number,
-        field: keyof Variant,
-        value: string
-    ) => {
+    const handleVariantChange = (index: number, field: keyof Variant, value: string) => {
         setVariants((prev) =>
             prev.map((v, i) => (i === index ? { ...v, [field]: value } : v))
         );
     };
 
-    const handleVariantImageUpload = async (
-        index: number,
-        e: ChangeEvent<HTMLInputElement>
-    ) => {
+    const handleVariantImageUpload = async (index: number, e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
@@ -439,6 +439,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({open, onOpe
                 description: formData.description,
                 id: formData.id,
                 categoryId: formData.categoryId,
+                categories: formData.categories,
                 brandId: formData.brandId || null,
                 stockNumber: stockNumberToSend,
                 gender: formData.gender || null,
@@ -495,6 +496,16 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({open, onOpe
         (c) => c._id === formData.categoryId
     );
     const showBrandSelect = selectedCategory?.name === "حقائب اليد";
+
+    const toggleExtraCategory = (id: string) => {
+        setFormData((prev) => ({
+            ...prev,
+            categories: prev.categories.includes(id)
+                ? prev.categories.filter((c) => c !== id)
+                : [...prev.categories, id],
+        }));
+    };
+
 
     return (
         <Dialog open={open} onOpenChange={(o) => !saving && onOpenChange(o)}>
@@ -739,6 +750,34 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({open, onOpe
                                 </Select>
                             </div>
                         )}
+                    </div>
+
+
+                    {/* Additional categories */}
+                    <div className="space-y-2">
+                        <Label>Additional Categories (optional)</Label>
+                        <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
+                            {categories
+                                .filter((cat) => cat._id !== formData.categoryId)
+                                .map((cat) => (
+                                    <div key={cat._id} className="flex items-center gap-2">
+                                        <Checkbox
+                                            id={`edit-extra-cat-${cat._id}`}
+                                            checked={formData.categories.includes(cat._id)}
+                                            onCheckedChange={() => toggleExtraCategory(cat._id)}
+                                        />
+                                        <Label
+                                            htmlFor={`edit-extra-cat-${cat._id}`}
+                                            className="font-normal cursor-pointer"
+                                        >
+                                            {cat.name}
+                                        </Label>
+                                    </div>
+                                ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                            The product will also appear in these categories.
+                        </p>
                     </div>
 
                     {/* Stock + Color (single-color only) */}

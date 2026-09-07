@@ -61,6 +61,7 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({onProductCrea
     image: [] as string[],
     description: "",
     categoryId: "",
+    categories: [] as string[],
     brandId: "",
     stockNumber: "",
     color: "",
@@ -106,6 +107,7 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({onProductCrea
       image: [],
       description: "",
       categoryId: "",
+      categories: [],
       brandId: "",
       stockNumber: "",
       color: "",
@@ -341,6 +343,7 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({onProductCrea
         description: formData.description,
         id: formData.id,
         categoryId: formData.categoryId,
+        categories: formData.categories,
         brandId: formData.brandId || null,
         stockNumber: totalStock,
         gender: formData.gender || null,
@@ -399,6 +402,15 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({onProductCrea
         variant: "destructive",
       });
     }
+  };
+
+  const toggleExtraCategory = (id: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      categories: prev.categories.includes(id)
+          ? prev.categories.filter((c) => c !== id)
+          : [...prev.categories, id],
+    }));
   };
 
   const handleStatusChange = (key: StatusKey, checked: boolean | "indeterminate") => {
@@ -526,8 +538,7 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({onProductCrea
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Category *</Label>
-                <Select
-                    value={formData.categoryId}
+                <Select value={formData.categoryId}
                     onValueChange={(value) =>
                         setFormData((prev) => ({ ...prev, categoryId: value, brandId: "" }))
                     }
@@ -545,15 +556,37 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({onProductCrea
                 </Select>
               </div>
 
+
+              {/* Additional categories */}
+              <div className="space-y-2">
+                <Label>Additional Categories (optional)</Label>
+                <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
+                  {categories
+                      .filter((cat) => cat._id !== formData.categoryId) // hide the primary
+                      .map((cat) => (
+                          <div key={cat._id} className="flex items-center gap-2">
+                            <Checkbox
+                                id={`extra-cat-${cat._id}`}
+                                checked={formData.categories.includes(cat._id)}
+                                onCheckedChange={() => toggleExtraCategory(cat._id)}
+                            />
+                            <Label htmlFor={`extra-cat-${cat._id}`} className="font-normal cursor-pointer">
+                              {cat.name}
+                            </Label>
+                          </div>
+                      ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  The product will also appear in these categories.
+                </p>
+              </div>
+
               {showBrandSelect && (
                   <div className="space-y-2">
                     <Label>
                       Brand {showBrandSelect && <span className="text-red-500">*</span>}
                     </Label>
-                    <Select
-                        value={formData.brandId}
-                        onValueChange={(value) => setFormData({ ...formData, brandId: value })}
-                    >
+                    <Select value={formData.brandId} onValueChange={(value) => setFormData({ ...formData, brandId: value })}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select brand" />
                       </SelectTrigger>
@@ -620,10 +653,7 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({onProductCrea
                     {/* Size */}
                     <div className="space-y-2">
                       <Label>Size</Label>
-                      <Select
-                          value={formData.size}
-                          onValueChange={(value) => setFormData({ ...formData, size: value })}
-                      >
+                      <Select value={formData.size} onValueChange={(value) => setFormData({ ...formData, size: value })}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select size" />
                         </SelectTrigger>
@@ -638,9 +668,7 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({onProductCrea
                     {/* Gender */}
                     <div className="space-y-2">
                       <Label>Gender</Label>
-                      <Select
-                          value={formData.gender}
-                          onValueChange={(value) =>
+                      <Select value={formData.gender} onValueChange={(value) =>
                               setFormData((prev) => ({ ...prev, gender: value }))
                           }
                       >
@@ -821,10 +849,7 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({onProductCrea
                     {/* Size */}
                     <div className="space-y-2">
                       <Label>Size</Label>
-                      <Select
-                          value={formData.size}
-                          onValueChange={(value) => setFormData({ ...formData, size: value })}
-                      >
+                      <Select value={formData.size} onValueChange={(value) => setFormData({ ...formData, size: value })}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select size" />
                         </SelectTrigger>
@@ -839,9 +864,7 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({onProductCrea
                     {/* Gender */}
                     <div className="space-y-2">
                       <Label>Gender</Label>
-                      <Select
-                          value={formData.gender}
-                          onValueChange={(value) =>
+                      <Select value={formData.gender} onValueChange={(value) =>
                               setFormData((prev) => ({ ...prev, gender: value }))
                           }
                       >
@@ -906,27 +929,15 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({onProductCrea
             {/* Flags */}
             <div className="flex flex-wrap gap-6">
               <div className="flex items-center space-x-2">
-                <Checkbox
-                    id="isSoldOut"
-                    checked={formData.isSoldOut}
-                    onCheckedChange={(checked) => handleStatusChange("isSoldOut", checked)}
-                />
+                <Checkbox id="isSoldOut" checked={formData.isSoldOut} onCheckedChange={(checked) => handleStatusChange("isSoldOut", checked)}/>
                 <Label htmlFor="isSoldOut">Sold Out</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <Checkbox
-                    id="isOnSale"
-                    checked={formData.isOnSale}
-                    onCheckedChange={(checked) => handleStatusChange("isOnSale", checked)}
-                />
+                <Checkbox id="isOnSale" checked={formData.isOnSale} onCheckedChange={(checked) => handleStatusChange("isOnSale", checked)}/>
                 <Label htmlFor="isOnSale">On Sale</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <Checkbox
-                    id="isSoon"
-                    checked={formData.isSoon}
-                    onCheckedChange={(checked) => handleStatusChange("isSoon", checked)}
-                />
+                <Checkbox id="isSoon" checked={formData.isSoon} onCheckedChange={(checked) => handleStatusChange("isSoon", checked)}/>
                 <Label htmlFor="isSoon">Coming Soon</Label>
               </div>
             </div>

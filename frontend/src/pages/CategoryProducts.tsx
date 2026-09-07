@@ -27,6 +27,7 @@ type ApiProduct = {
     wholesalerPrice?: number;
     stockNumber?: number;
     size?: string;
+    isSoldOut?: boolean; // ← add this
 };
 type BackendProduct = {
     _id: string;
@@ -162,38 +163,6 @@ const CategoryProducts = () => {
         fetchData();
     }, [categoryId]);
     const isHandbagsCategory = category?.name === "حقائب اليد"  || category?.name === "Kéwi bags";
-    const sortWithSoldOutBottom = (list: ApiProduct[]) => {
-        const arr = [...list];
-
-        arr.sort((a, b) => {
-            const aSold = !!(a as any).isSoldOut;
-            const bSold = !!(b as any).isSoldOut;
-
-            // ✅ 1) Sold out always at bottom
-            if (aSold !== bSold) return aSold ? 1 : -1;
-
-            // ✅ 2) If both same soldOut state, apply your chosen sort
-            if (sortOrder === "random") {
-                const aKey = String((a as any)._id || (a as any).id);
-                const bKey = String((b as any)._id || (b as any).id);
-                return getRandomRank(aKey) - getRandomRank(bKey); // your stable random
-            }
-
-            const aCreated = (a as any).createdAt;
-            const bCreated = (b as any).createdAt;
-            if (!aCreated || !bCreated) return 0;
-
-            const aTime = new Date(aCreated).getTime();
-            const bTime = new Date(bCreated).getTime();
-
-            if (sortOrder === "latest") return bTime - aTime;
-            if (sortOrder === "oldest") return aTime - bTime;
-
-            return 0;
-        });
-
-        return arr;
-    };
 
     const filteredProducts = useMemo(() => {
         const q = (searchQuery || "").toLowerCase();
@@ -203,35 +172,29 @@ const CategoryProducts = () => {
             const desc = getLocalizedDescription(p)?.toLowerCase() || "";
             const internalId = (p.id || "").toLowerCase();
 
-            // 🔎 search
             const matchesSearch =
                 name.includes(q) ||
                 desc.includes(q) ||
                 internalId.includes(q);
 
-            // 🏷️ brand filter (ONLY for handbags, NOT discount page)
             let matchesBrand = true;
             if (!isDiscountCategory && isHandbagsCategory && selectedBrand !== "all") {
                 const brandId =
                     typeof p.brandId === "object"
                         ? p.brandId?._id
                         : p.brandId;
-
                 matchesBrand = brandId === selectedBrand;
             }
 
-            // 📦 category filter (ONLY for discount page)
             let matchesCategory = true;
             if (isDiscountCategory && selectedCategoryFilter !== "all") {
                 const catId =
                     typeof p.categoryId === "object"
                         ? p.categoryId?._id
                         : p.categoryId;
-
                 matchesCategory = catId === selectedCategoryFilter;
             }
 
-            // 📏 size filter
             let matchesSize = true;
             if (selectedSize !== "all") {
                 matchesSize = (p as any).size === selectedSize;
@@ -239,34 +202,39 @@ const CategoryProducts = () => {
 
             return matchesSearch && matchesBrand && matchesCategory && matchesSize;
         });
-        // 🔄 sorting
-        list.sort((a, b) => {
-            if (sortOrder === "random") {
-                const aKey = String((a as any)._id || a.id);
-                const bKey = String((b as any)._id || b.id);
-                return getRandomRank(aKey) - getRandomRank(bKey);
-            }
+        const isProductSoldOut = (p: any): boolean => {
+            const totalStock = p.stockNumber ?? ((p.warehouseQty ?? 0) + (p.kewiQty ?? 0));
+            return Boolean(p.isSoldOut) || totalStock <= 0;
+        };
+        // sort inline — no external function dependency issues
+        const result = [...list].sort((a, b) => {
+            const aSold = isProductSoldOut(a);
+            const bSold = isProductSoldOut(b);
 
+            if (aSold !== bSold) return aSold ? 1 : -1;
+
+            if (sortOrder === "random") {
+                return getRandomRank(String(a._id || a.id)) - getRandomRank(String(b._id || b.id));
+            }
             const aTime = new Date((a as any).createdAt || 0).getTime();
             const bTime = new Date((b as any).createdAt || 0).getTime();
-
             if (sortOrder === "latest") return bTime - aTime;
             if (sortOrder === "oldest") return aTime - bTime;
-
             return 0;
         });
 
-        return sortWithSoldOutBottom(list);
+        return result;
     }, [
         products,
         searchQuery,
         isHandbagsCategory,
-        isDiscountCategory,        // ✅ important
+        isDiscountCategory,
         selectedBrand,
-        selectedCategoryFilter,    // ✅ important
+        selectedCategoryFilter,
         selectedSize,
-        sortOrder
+        sortOrder,
     ]);
+
 
     const incrementBrandClick = async (brandId: string) => {
         try {
