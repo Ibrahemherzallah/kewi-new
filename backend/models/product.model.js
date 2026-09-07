@@ -23,6 +23,11 @@ const productSchema = new mongoose.Schema({
     ref: "Category",
     required: true
   },
+  categories: {
+    type: [mongoose.Schema.Types.ObjectId],
+    ref: "Category",
+    default: [],
+  },
   brandId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Brand",

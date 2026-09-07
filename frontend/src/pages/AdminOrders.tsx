@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, ClipboardList, Search } from "lucide-react";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow,} from "@/components/ui/table";
 import {Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerClose,} from "@/components/ui/drawer";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {toast} from "sonner";
 import {useLanguage} from "@/contexts/LanguageContext.tsx";
 import logo from "../assets/logo.png";
@@ -42,7 +43,7 @@ interface Purchase {
   createdAt: string;
   updatedAt: string;
   discount: boolean;
-  orderStatus?: "ordered" | "confirmed" | "shipped" | "delivered";
+  orderStatus?: "ordered" | "confirmed" | "shipped" | "delivered" | "canceled";
   confirmedAt?: string;
   shippedAt?: string;
   deliveredAt?: string;
@@ -57,6 +58,7 @@ const AdminOrders = () => {
   const [completedOrders, setCompletedOrders] = useState<Set<string>>(
       new Set()
   );
+  const [cancelTarget, setCancelTarget] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Purchase | null>(null);
@@ -114,9 +116,9 @@ const AdminOrders = () => {
       case 'الضفة الغربية':
         deliveryPrice = order?.deliveryType === 'مستعجل' ? 20 : 10;
         break;
-      case '48 Territories':
-      case '48 טריטוריות':
-      case 'الداخل':
+      case 'Israeli areas':
+      case 'אזורים ישראליים':
+      case 'مناطق ٤٨':
         deliveryPrice = order?.deliveryType === 'مستعجل' ? 70 : 50;
         break;
       case 'Jerusalem':
@@ -343,7 +345,7 @@ const AdminOrders = () => {
     fetchOrders();
   }, []);
 
-  const handleUpdateStatus = async (orderId: string, action: "confirm" | "ship") => {
+  const handleUpdateStatus = async (orderId: string, action: "confirm" | "ship" | "cancel") => {
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
@@ -497,6 +499,7 @@ const AdminOrders = () => {
                     <TableRow>
                       <TableHead>Confirmed</TableHead>
                       <TableHead>Shipped</TableHead>
+                      <TableHead>🚫</TableHead>
                       <TableHead>Customer</TableHead>
                       <TableHead>Phone</TableHead>
                       <TableHead>City</TableHead>
@@ -504,6 +507,7 @@ const AdminOrders = () => {
                       <TableHead>Total</TableHead>
                       <TableHead>Discount</TableHead>
                       <TableHead>Delivery</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -540,6 +544,15 @@ const AdminOrders = () => {
                               />
                             </TableCell>
 
+                            {/* Cancel checkbox */}
+                            <TableCell>
+                              <Checkbox
+                                  checked={order.orderStatus === "canceled"}
+                                  disabled={order.orderStatus === "delivered" || order.orderStatus === "canceled"}
+                                  onCheckedChange={() => setCancelTarget(order._id)}
+                              />
+                            </TableCell>
+
                             <TableCell>{order.fullName}</TableCell>
                             <TableCell>{order.phoneNumber}</TableCell>
                             <TableCell>{order.city}</TableCell>
@@ -556,8 +569,7 @@ const AdminOrders = () => {
                                   : order.orderStatus === "shipped"
                                       ? "Shipped"
                                       : order.orderStatus === "confirmed"
-                                          ? "Confirmed"
-                                          : "Ordered"}
+                                          ? "Confirmed" : order.orderStatus === "canceled" ? 'Canceled' : "Ordered"}
                             </TableCell>
 
                             <TableCell className="flex gap-2">
@@ -662,7 +674,30 @@ const AdminOrders = () => {
             )}
           </DrawerContent>
         </Drawer>
-
+        <Dialog open={!!cancelTarget} onOpenChange={(o) => { if (!o) setCancelTarget(null); }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Cancel Order</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to cancel this order? Stock will be restored if it was already deducted.
+            </p>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCancelTarget(null)}>
+                Go Back
+              </Button>
+              <Button
+                  variant="destructive"
+                  onClick={() => {
+                    if (cancelTarget) handleUpdateStatus(cancelTarget, "cancel");
+                    setCancelTarget(null);
+                  }}
+              >
+                Yes, Cancel Order
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
   );
 };

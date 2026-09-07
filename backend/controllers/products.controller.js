@@ -74,7 +74,12 @@ export const getProductsByCategory = async (req, res) => {
     }
     else {
         try {
-            const products = await Product.find({ categoryId })
+            const products = await Product.find({
+                $or: [
+                    { categoryId: categoryId },
+                    { categories: categoryId },
+                ],
+            })
                 .populate('categoryId')
                 .populate('brandId');
 
@@ -136,6 +141,7 @@ export const addProduct = async (req, res) => {
             description,
             id,                 // product ID from admin
             categoryId,
+            categories,
             brandId,
             gender,
             size,
@@ -208,7 +214,7 @@ export const addProduct = async (req, res) => {
             categoryId: mongoose.Types.ObjectId.isValid(categoryId)
                 ? new mongoose.Types.ObjectId(categoryId)
                 : null,
-
+            categories: categories || [],
             brandId: mongoose.Types.ObjectId.isValid(brandId)
                 ? new mongoose.Types.ObjectId(brandId)
                 : null,
@@ -320,9 +326,6 @@ export const updateProduct = async (req, res) => {
             return res.status(404).json({ message: "Product not found" });
         }
 
-        // -----------------------------
-        // Helpers
-        // -----------------------------
         const toBool = (val, fallback) => {
             if (val === undefined || val === null) return fallback;
             if (typeof val === "boolean") return val;
@@ -343,9 +346,15 @@ export const updateProduct = async (req, res) => {
             ? new mongoose.Types.ObjectId(rawCategoryId)
             : existingProduct.categoryId;
 
-        // -----------------------------
-        // Images (JSON, string, or files)
-        // -----------------------------
+// 👇 NEW: normalize additional categories array
+        let categories = existingProduct.categories || [];
+        if (Array.isArray(req.body.categories)) {
+            categories = req.body.categories
+                .map((c) => (c?._id || c)) // handle populated objects or raw ids
+                .filter((c) => mongoose.Types.ObjectId.isValid(c))
+                .map((c) => new mongoose.Types.ObjectId(c));
+        }
+
         let imageUrls; // undefined means "keep existingProduct.image"
 
         if (req.body.images || req.body.image) {
@@ -411,6 +420,7 @@ export const updateProduct = async (req, res) => {
 
             stockNumber,
             categoryId,
+            categories, // 👈 add this
             brandId,
 
             gender: req.body.gender ?? existingProduct.gender,

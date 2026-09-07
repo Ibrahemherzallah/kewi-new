@@ -31,7 +31,7 @@ const AdminDashboard = () => {
     localStorage.removeItem("user");
     navigate("/");
   };
-  console.log("clickCountRef.current ", clickCountRef.current)
+
   const handleWholesalerCardClick = () => {
     clickCountRef.current += 1;
     console.log("clickCountRef out ", clickCountRef.current)

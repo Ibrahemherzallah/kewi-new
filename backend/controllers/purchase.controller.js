@@ -50,6 +50,130 @@ export const getPurchase = async (req, res) => {
     }
 };
 
+export const getAccountingStats = async (req, res) => {
+    try {
+        const { year } = req.query; // optional filter
+        const selectedYear = parseInt(year) || new Date().getFullYear();
+
+        // Base match — only shipped + delivered
+        const revenueMatch = {
+            orderStatus: { $in: ["shipped", "delivered"] },
+        };
+
+        // ── Summary cards (all time) ──────────────────────────────
+        const [summaryResult] = await Purchase.aggregate([
+            { $match: revenueMatch },
+            {
+                $group: {
+                    _id: null,
+                    totalRevenue: { $sum: "$totalPrice" },
+                    totalOrders: { $sum: 1 },
+                    avgOrderValue: { $avg: "$totalPrice" },
+                },
+            },
+        ]);
+
+        // ── Monthly revenue for selected year ────────────────────
+        const monthlyRevenue = await Purchase.aggregate([
+            {
+                $match: {
+                    ...revenueMatch,
+                    $or: [
+                        {
+                            shippedAt: {
+                                $gte: new Date(`${selectedYear}-01-01`),
+                                $lte: new Date(`${selectedYear}-12-31`),
+                            },
+                        },
+                        {
+                            deliveredAt: {
+                                $gte: new Date(`${selectedYear}-01-01`),
+                                $lte: new Date(`${selectedYear}-12-31`),
+                            },
+                        },
+                    ],
+                },
+            },
+            {
+                $group: {
+                    _id: {
+                        month: {
+                            $month: {
+                                $ifNull: ["$shippedAt", "$deliveredAt"], // prefer shippedAt
+                            },
+                        },
+                    },
+                    revenue: { $sum: "$totalPrice" },
+                    orders: { $sum: 1 },
+                },
+            },
+            { $sort: { "_id.month": 1 } },
+        ]);
+
+        // ── Yearly revenue (all years) ────────────────────────────
+        const yearlyRevenue = await Purchase.aggregate([
+            { $match: revenueMatch },
+            {
+                $group: {
+                    _id: {
+                        year: {
+                            $year: {
+                                $ifNull: ["$shippedAt", "$deliveredAt"],
+                            },
+                        },
+                    },
+                    revenue: { $sum: "$totalPrice" },
+                    orders: { $sum: 1 },
+                },
+            },
+            { $sort: { "_id.year": 1 } },
+        ]);
+
+        // ── Orders by status (all orders, no filter) ──────────────
+        const statusBreakdown = await Purchase.aggregate([
+            {
+                $group: {
+                    _id: "$orderStatus",
+                    count: { $sum: 1 },
+                },
+            },
+        ]);
+
+        // ── Fill missing months with 0 ────────────────────────────
+        const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        const filledMonthly = monthNames.map((month, i) => {
+            const found = monthlyRevenue.find((m) => m._id.month === i + 1);
+            return {
+                month,
+                revenue: found?.revenue || 0,
+                orders: found?.orders || 0,
+            };
+        });
+
+        res.status(200).json({
+            summary: {
+                totalRevenue: summaryResult?.totalRevenue || 0,
+                totalOrders: summaryResult?.totalOrders || 0,
+                avgOrderValue: summaryResult?.avgOrderValue || 0,
+            },
+            monthly: filledMonthly,
+            yearly: yearlyRevenue.map((y) => ({
+                year: y._id.year,
+                revenue: y.revenue,
+                orders: y.orders,
+            })),
+            statusBreakdown: statusBreakdown.map((s) => ({
+                status: s._id,
+                count: s.count,
+            })),
+            selectedYear,
+        });
+    } catch (err) {
+        console.error("Accounting stats error:", err);
+        res.status(500).json({ error: err.message });
+    }
+};
+
 
 const verifyCaptcha = async (token) => {
     const secret = process.env.RECAPTCHA_SECRET_KEY;
@@ -162,6 +286,33 @@ const deductStockForOrder = async (order, session) => {
     }
 };
 
+const restoreStockForOrder = async (order, session) => {
+    for (const item of order.products) {
+        const qty = Number(item.quantity || 1);
+
+        const product = await Product.findById(item.productId).session(session);
+        if (!product) {
+            console.warn(`Product not found during stock restore: ${item.productId}`);
+            continue; // don't throw — order is being canceled anyway
+        }
+
+        if (product.isMultiColor && Array.isArray(product.variants) && product.variants.length > 0) {
+            const color = (item.color || "").trim();
+            const variant = product.variants.find(v => (v.color || "").trim() === color);
+
+            if (variant) {
+                variant.stockNumber += qty;
+                await product.save({ session });
+            } else {
+                console.warn(`Variant not found during restore: ${item.color} for product ${product._id}`);
+            }
+        } else {
+            product.stockNumber += qty;
+            product.isSoldOut = false; // restore means it's available again
+            await product.save({ session });
+        }
+    }
+};
 
 export const updateOrderStatus = async (req, res) => {
     const session = await mongoose.startSession();
@@ -195,10 +346,7 @@ export const updateOrderStatus = async (req, res) => {
                 order.confirmedAt = new Date();
                 updated = true;
             } else if (action === "ship") {
-                if (
-                    order.orderStatus === "ordered" ||
-                    order.orderStatus === "confirmed"
-                ) {
+                if (order.orderStatus === "ordered" || order.orderStatus === "confirmed") {
                     order.orderStatus = "shipped";
                     if (!order.confirmedAt) order.confirmedAt = new Date();
                     order.shippedAt = new Date();
@@ -207,10 +355,7 @@ export const updateOrderStatus = async (req, res) => {
                     throw new Error("INVALID_STATE_SHIP");
                 }
             } else if (action === "delivered") {
-                if (
-                    order.orderStatus === "shipped" ||
-                    order.orderStatus === "confirmed"
-                ) {
+                if (order.orderStatus === "shipped" || order.orderStatus === "confirmed") {
                     const previousStatus = order.orderStatus;
 
                     order.orderStatus = "delivered";
@@ -225,6 +370,20 @@ export const updateOrderStatus = async (req, res) => {
                 } else {
                     throw new Error("INVALID_STATE_DELIVER");
                 }
+            } else if (action === "cancel") {
+                if (order.orderStatus === "delivered") {
+                    throw new Error("INVALID_STATE_CANCEL"); // can't cancel a delivered order
+                }
+
+                // If stock was already deducted, return it
+                if (order.stockDeducted) {
+                    await restoreStockForOrder(order, session);
+                    order.stockDeducted = false;
+                }
+
+                order.orderStatus = "canceled";
+                order.canceledAt = new Date();
+                updated = true;
             } else {
                 throw new Error("INVALID_ACTION");
             }
@@ -293,6 +452,9 @@ export const updateOrderStatus = async (req, res) => {
 
         if (error.message === "INVALID_ACTION") {
             return res.status(400).json({ message: "Invalid action" });
+        }
+        if (error.message === "INVALID_STATE_CANCEL") {
+            return res.status(400).json({ message: "Cannot cancel a delivered order" });
         }
 
         return res.status(500).json({

@@ -56,7 +56,7 @@ const purchaseSchema = new mongoose.Schema({
   },
   orderStatus: {
     type: String,
-    enum: ['ordered', 'confirmed', 'shipped', 'delivered'],
+    enum: ['ordered', 'confirmed', 'shipped', 'delivered', 'canceled'],
     default: 'ordered', // when purchase is first created
   },
   confirmedAt: Date,
@@ -75,6 +75,7 @@ const purchaseSchema = new mongoose.Schema({
     enum: ["visa", 'cash'],
     default: 'cash',
   },
+  canceledAt: Date,
 
 }, { timestamps: true });
 

@@ -1,5 +1,3 @@
-// src/pages/admin/AdminCategories.tsx
-
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -21,6 +19,7 @@ type Category = {
   description: string;
   image: string;
   other: boolean;
+  order: number;
   parentCategory?: string | null;
   productsCount?: number;
   createdAt?: string;
@@ -83,6 +82,25 @@ const AdminCategories = () => {
         Authorization: `Bearer ${token}`,
       }, });
     if (res.ok) fetchCategories();
+  };
+
+  const handleReorder = async (index: number, direction: "up" | "down") => {
+    const swapIndex = direction === "up" ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= filteredCategories.length) return;
+
+    const idA = filteredCategories[index]._id;
+    const idB = filteredCategories[swapIndex]._id;
+
+    await fetch(`${CATEGORIES_API}/reorder`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ idA, idB }),
+    });
+
+    fetchCategories(); // refresh
   };
 
   return (
@@ -186,22 +204,19 @@ const AdminCategories = () => {
                           <TableCell>{formatDate(category.updatedAt)}</TableCell>
 
                           <TableCell className="flex gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setSelected(category);
-                                  setEditOpen(true);
-                                }}
-                            >
+                            <Button variant="outline" size="sm" onClick={() => handleReorder(index, "up")} disabled={index === 0}>
+                              ↑
+                            </Button>
+
+                            <Button variant="outline" size="sm" onClick={() => handleReorder(index, "down")} disabled={index === filteredCategories.length - 1}>
+                              ↓
+                            </Button>
+
+                            <Button variant="outline" size="sm" onClick={() => {setSelected(category);setEditOpen(true);}}>
                               Edit
                             </Button>
 
-                            <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => handleDelete(category._id)}
-                            >
+                            <Button variant="destructive" size="sm" onClick={() => handleDelete(category._id)}>
                               Delete
                             </Button>
                           </TableCell>
