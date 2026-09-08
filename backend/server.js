@@ -83,7 +83,8 @@ app.use(
                     "https://cdn.jsdelivr.net",
                     "https://www.google.com",
                     "https://www.gstatic.com",
-                    "https://connect.facebook.net"
+                    "https://connect.facebook.net",
+                    "https://www.googletagmanager.com",
                 ],
 
                 styleSrc: [
@@ -94,6 +95,8 @@ app.use(
 
                 imgSrc: [
                     "'self'",
+                    "https://www.google-analytics.com",
+                    "https://*.google-analytics.com",
                     "data:",
                     "https://storage.googleapis.com",
                     "https://firebasestorage.googleapis.com",
@@ -108,6 +111,10 @@ app.use(
 
                 connectSrc: [
                     "'self'",
+                    "https://www.google-analytics.com",
+                    "https://*.google-analytics.com",
+                    "https://*.analytics.google.com",
+                    "https://www.googletagmanager.com",
                     "https://kewi.ps",
                     "https://www.kewi.ps",
                     "https://www.google.com",
