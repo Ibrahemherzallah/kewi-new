@@ -39,6 +39,7 @@ type Product = {
   salePrice?: number | null;
   isSoldOut?: boolean;
   isOnSale?: boolean;
+  isNew?: boolean;
   isSoon?: boolean;
   featured?: boolean;
 };

@@ -39,7 +39,7 @@ type ColorVariant = {
   image: string | null;
 };
 
-type StatusKey = "isSoldOut" | "isOnSale" | "isSoon";
+type StatusKey = "isSoldOut" | "isOnSale" | "isSoon" | "isNew";
 
 export const AddProductDialog: React.FC<AddProductDialogProps> = ({onProductCreated,}) => {
   const [open, setOpen] = useState(false);
@@ -72,6 +72,7 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({onProductCrea
     isSoldOut: false,
     isOnSale: false,
     isSoon: false,
+    isNew: false,
   });
   const [variants, setVariants] = useState<ColorVariant[]>([]);
 
@@ -119,6 +120,7 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({onProductCrea
       isSoldOut: false,
       isOnSale: false,
       isSoon: false,
+      isNew: false,
     });
     setImagePreviews([]);
   };
@@ -356,6 +358,7 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({onProductCrea
         isSoldOut: formData.isSoldOut,
         isOnSale: formData.isOnSale,
         isSoon: formData.isSoon,
+        isNew: formData.isNew,
 
         // images: from variants in multi-color mode, otherwise from main uploader
         images: isMultiColor ? variantImages : formData.image,
@@ -939,6 +942,14 @@ export const AddProductDialog: React.FC<AddProductDialogProps> = ({onProductCrea
               <div className="flex items-center space-x-2">
                 <Checkbox id="isSoon" checked={formData.isSoon} onCheckedChange={(checked) => handleStatusChange("isSoon", checked)}/>
                 <Label htmlFor="isSoon">Coming Soon</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                    id="isNew"
+                    checked={formData.isNew}
+                    onCheckedChange={(checked) => setFormData({ ...formData, isNew: checked === true })}
+                />
+                <Label htmlFor="isNew">New Arrival</Label>
               </div>
             </div>
 

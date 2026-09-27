@@ -18,6 +18,11 @@ const productSchema = new mongoose.Schema({
     type: String,
     default: ""
   },
+  isNew: {
+    type: Boolean,
+    required: false,
+    default: false
+  },
   categoryId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Category",
@@ -41,7 +46,7 @@ const productSchema = new mongoose.Schema({
   gender: {
     type: String,
     required: false,
-    enum: ['نسائي','رجالي']
+    enum: ['نسائي','رجالي','أطفال']
   },
   color: {
     type: String,
