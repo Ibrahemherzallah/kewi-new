@@ -14,7 +14,18 @@ export const getProducts = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+export const getNewProducts = async (req, res) => {
+    try {
+        const products = await Product.find({ isNew: true })
+            .sort({ createdAt: -1 })
+            .limit(20);
 
+        res.status(200).json(products);
+    } catch (error) {
+        console.error("Error fetching new products:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
 export const getFeaturedProducts = async (req, res) => {
     try {
         const products = await Product.find({ featured: true })
@@ -136,6 +147,7 @@ export const getNewestProducts = async (req, res) => {
 
 export const addProduct = async (req, res) => {
     try {
+        console.log("the req.body is : ", req.body)
         const {
             name,
             description,
@@ -153,6 +165,7 @@ export const addProduct = async (req, res) => {
             isOnSale = false,
             isSoon = false,
             salePrice,
+            isNew = false,
             numOfClicks = 0,
             images,             // array or JSON string of image URLs
             image,              // sometimes single or array, older payloads
@@ -232,7 +245,7 @@ export const addProduct = async (req, res) => {
             isSoldOut: toBool(isSoldOut),
             isOnSale: toBool(isOnSale),
             isSoon: toBool(isSoon),
-
+            isNew: toBool(isNew),
             numOfClicks: Number(numOfClicks) || 0,
             featured: false,          // still default false
 
@@ -315,7 +328,6 @@ export const incrementProductClicks = async (req, res) => {
 export const updateProduct = async (req, res) => {
     try {
         const { id } = req.params;
-
         // Validate ObjectId
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ error: "Invalid product ID format" });
@@ -409,6 +421,7 @@ export const updateProduct = async (req, res) => {
         const isSoldOut = toBool(req.body.isSoldOut, existingProduct.isSoldOut);
         const isOnSale = toBool(req.body.isOnSale, existingProduct.isOnSale);
         const isSoon = toBool(req.body.isSoon, existingProduct.isSoon);
+        const isNew = toBool(req.body.isNew, existingProduct.isNew);
 
         // -----------------------------
         // Build updated data
@@ -444,6 +457,7 @@ export const updateProduct = async (req, res) => {
             isSoldOut,
             isOnSale,
             isSoon,
+            isNew,
             featured: req.body.featured ?? existingProduct.featured,
 
             isMultiColor,

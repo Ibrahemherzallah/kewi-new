@@ -64,6 +64,7 @@ type Product = {
     isSoldOut?: boolean;
     isOnSale?: boolean;
     isSoon?: boolean;
+    isNew?: boolean;
     // NEW FIELDS
     isMultiColor?: boolean;
     variants?: { color?: string; stockNumber?: number; image?: string }[];
@@ -453,6 +454,7 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({open, onOpe
                 isSoldOut,
                 isOnSale,
                 isSoon,
+                isNew: formData.isNew,
                 images: imagesToSend,
                 isMultiColor,
                 variants: variantsToSend,
@@ -926,6 +928,14 @@ export const EditProductDialog: React.FC<EditProductDialogProps> = ({open, onOpe
                                     onCheckedChange={() => setProductStatus("soldOut")}
                                 />
                                 <Label htmlFor="edit-status-soldOut">Sold Out</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <Checkbox
+                                    id="isNew"
+                                    checked={formData.isNew}
+                                    onCheckedChange={(checked) => setFormData({ ...formData, isNew: checked === true })}
+                                />
+                                <Label htmlFor="isNew">New Arrival</Label>
                             </div>
                         </div>
                     </div>

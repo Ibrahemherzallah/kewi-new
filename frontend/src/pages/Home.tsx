@@ -11,11 +11,12 @@ import {Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious,
 import { Gift } from "lucide-react";
 import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,} from "@/components/ui/dialog";
 import {trackMetaEvent} from "@/utils/metaPixel.ts";
-
+import { NewArrivalsSection } from "@/components/NewArrivalsSection";
 // 🔹 API base
 const API_BASE = import.meta.env.VITE_ENV || "https://kewi.ps";
 const CATEGORIES_API = `${API_BASE}/admin/api/categories`;
 const PRODUCTS_API = `${API_BASE}/user/api/products`;
+const NEW_PRODUCTS_API = `${API_BASE}/user/api/products/new`;
 
 type BackendCategory = {
   _id: string;
@@ -38,6 +39,7 @@ type BackendProduct = {
   salePrice?: number;
   isOnSale?: boolean;
   isSoldOut?: boolean;
+  isNew?: boolean;
   gender?: string;
   size?: string;
   color?: string;
@@ -50,7 +52,7 @@ const placeholderImage = "https://via.placeholder.com/400x400.png?text=No+Image"
 const Home = () => {
   const { toast } = useToast();
   const { t, language } = useLanguage();
-
+  const [newProducts, setNewProducts] = useState<BackendProduct[]>([]);
   const [categories, setCategories] = useState<BackendCategory[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<BackendProduct[]>([]);
   const [loading, setLoading] = useState(false);
@@ -100,9 +102,10 @@ const Home = () => {
       try {
         setLoading(true);
 
-        const [catRes, prodRes] = await Promise.all([
+        const [catRes, prodRes, newProdRes] = await Promise.all([
           fetch(CATEGORIES_API),
           fetch(PRODUCTS_API),
+          fetch(NEW_PRODUCTS_API),
         ]);
 
         if (catRes.ok) {
@@ -112,11 +115,12 @@ const Home = () => {
 
         if (prodRes.ok) {
           const prods: BackendProduct[] = await prodRes.json();
+          setFeaturedProducts((prods || []).slice(0, 8).filter(Boolean));
+        }
 
-          // Take first 4 as featured, but keep REAL shape
-          const top = (prods || []).slice(0, 8).filter(Boolean);
-
-          setFeaturedProducts(top);
+        if (newProdRes.ok) {
+          const newProds: BackendProduct[] = await newProdRes.json();
+          setNewProducts(newProds);
         }
       } catch (err) {
         console.error("Error loading home data:", err);
@@ -331,7 +335,7 @@ const Home = () => {
             </div>
           </div>
         </section>
-
+        <NewArrivalsSection products={newProducts} onAddToCart={handleAddToCart} />
         {/* Categories Slider */}
         <section className="py-16 bg-muted/30">
           <div className="container mx-auto px-4">
